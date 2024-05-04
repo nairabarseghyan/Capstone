@@ -169,3 +169,6 @@ data/results/Predictions/*
 
 models/ensemble_model.sav
 
+#macOS specific 
+
+*.DS_Store
