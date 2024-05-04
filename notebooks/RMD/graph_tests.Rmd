@@ -1,0 +1,653 @@
+---
+title: "graph_tests"
+author: "Naira Maria Barseghyan"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggfortify)
+library(scales)
+library(ggpubr)
+library(grid)
+library(png)
+library(gridExtra)
+library(dygraphs)
+library(xts)
+library(htmlwidgets)
+library(magick)
+library(paletteer)
+library(ggthemes)
+library(shadowtext)
+library(treemap)
+library(tidyverse)
+library(rstatix)
+
+```
+
+```{r}
+start_color <- "#0554a4"  # Dark Olive Green
+end_color <- "#c90c0f"   # Gold
+
+# Create a color ramp function
+custom_color_palette <- colorRampPalette(c(start_color,end_color))
+
+# Generate a palette of 10 colors
+default_palette <- custom_color_palette(10)
+
+#color_points <- c("#0554a4", "#999999","#061735","#c90c0f") 
+```
+
+
+# Importing preprocessing functions
+```{r}
+source("./preprocessing.R")
+```
+
+# Importing Logo for the graphs
+```{r}
+logo <- image_read("./img/nt_logo.png")
+```
+
+# Reading and creating necessary datasets 
+
+```{r}
+sales_raw <- read.csv("data/translated_data/csv/sales_whole.csv")
+holidays <- read.csv("data/translated_data/csv/armenian_holidays.csv")
+```
+# Preprocessing sales data
+
+```{r}
+sales_data_preprocessed <- process_sales_data(sales_raw, holidays)
+```
+
+# adding feutures to the data
+```{r}
+final_sales_data <- add_calendar_features(sales_data_preprocessed)
+```
+
+# Feuture engenereeing 
+
+```{r}
+anova_data <- final_sales_data
+
+# List of column names to convert to factors
+factors <- c("product_type", "Brand", "manufacture_country", "Branch", 
+                          "City", "IsHoliday", "day_of_week", "week_of_year", 
+                          "is_weekend", "quarter", "year", "month", "day")
+
+for (col in factors) {
+  anova_data[[col]] <- as.factor(anova_data[[col]])
+}
+```
+
+```{r}
+library(dplyr)
+
+
+anova_results <- list()
+
+for (factor in factors) {
+  # Perform ANOVA
+  model <- aov(Revenue_VAT ~ get(factor), data = final_sales_data)
+  summary_model <- summary(model)
+  
+  # print out summary tables
+  print (summary_model)
+  
+  # Extract the summary table for the factor
+  summary_table <- summary_model[[1]][["Mean Sq"]]
+
+  # Store results in the list with additional information
+  anova_results[[factor]] <- data.frame(
+    Factor = factor,
+    Df = summary_model[[1]]$Df[1],
+    SumSq = summary_model[[1]]$`Sum Sq`[1],
+    MeanSq = summary_model[[1]]$`Mean Sq`[1],
+    Fvalue = summary_model[[1]]$`F value`[1],
+    Pr = summary_model[[1]]$`Pr(>F)`[1]
+  )
+}
+```
+
+```{r}
+anova_dataframe <- do.call(rbind, anova_results)
+rownames(anova_dataframe) <- NULL  # Clean up row names
+
+
+significance_code <- function(p_value) {
+  if (p_value < 0.001) {
+    return("***")
+  } else if (p_value < 0.01) {
+    return("**")
+  } else if (p_value < 0.05) {
+    return("*")
+  } else if (p_value < 0.1) {
+    return(".")
+  } else {
+    return("")
+  }
+}
+
+anova_dataframe <- anova_dataframe %>%
+  mutate(Significance = sapply(Pr, significance_code))
+
+
+# View the resulting dataframe
+print(anova_dataframe)
+```
+
+```{r}
+write.csv(anova_dataframe, "./anova_results.csv", row.names = FALSE)
+```
+
+```{r}
+knitr::kable(anova_dataframe, format = "markdown")
+```
+
+# Data description
+```{r}
+column_info <- data.frame(
+  Attribute = names(final_sales_data),
+  DataType = sapply(final_sales_data, class),
+  stringsAsFactors = FALSE  # Avoid converting strings to factors
+)
+
+column_info
+write.csv(column_info, "./attributes_info.csv", row.names = FALSE)
+```
+
+
+```{r}
+knitr::kable(column_info, format = "markdown")
+```
+
+
+# EDA
+
+```{r}
+create_sales_time_series <- function(df, target_year, annotations, logo_path= "./img/nt_logo.png", custom_subtitle = NULL) {
+  # Filter the data for the specified year using the existing 'year' column
+  sales_data <- df %>%
+    filter(year == target_year) %>%
+    group_by(month = floor_date(sale_date, "day")) %>%
+    summarise(sum = sum(Revenue_VAT, na.rm = TRUE))
+
+  # Explicit conversion of 'month' to POSIXct
+  sales_data$month <- as.POSIXct(sales_data$month, tz = "UTC")
+
+  # Create an annotations data frame
+  annotations_df <- data.frame(
+    date = as.POSIXct(sapply(annotations, function(x) x$date), tz = "UTC"),
+    value = sapply(annotations, function(x) x$value),
+    label = sapply(annotations, function(x) x$label)
+  )
+
+  # Custom label function for Y-axis
+  custom_labels <- function(x) {
+    ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
+           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
+                  paste0(x)))
+  }
+
+  # Generate a dynamic subtitle if not provided
+  dynamic_subtitle <- if (is.null(custom_subtitle) && length(annotations) > 0) {
+    sapply(annotations, function(ann) {
+      paste("On", format(as.Date(ann$date), "%B %d"), "revenue was", scales::dollar(ann$value, scale = 1e-6, suffix = "M"))
+    }, simplify = FALSE) %>% paste(collapse = "\n")
+  } else {
+    custom_subtitle
+  }
+
+  # Create the ggplot object
+  p <- ggplot(sales_data, aes(x = month, y = sum)) +
+    geom_line(color = "#0554a4") +
+    geom_point(data = annotations_df, aes(x = date, y = value), color = '#c90c0f', size = 4, shape = 21, fill = "transparent") +
+    geom_text(data = annotations_df, aes(x = date, y = value, label = label), hjust = 1.2, vjust = 0, color = '#c90c0f', size = 3) +
+    scale_x_datetime(date_labels = '%b', breaks = scales::date_breaks("1 month")) +
+    scale_y_continuous(labels = custom_labels) +
+    labs(title = paste("Daily Sales in", target_year),
+         subtitle = dynamic_subtitle,
+         x = NULL, y = "Revenue") +
+    theme_minimal() +
+    theme(plot.margin = unit(c(0.5, 0.5, 3.5, 0.5), "lines"))
+
+  # Print the plot
+  print(p)
+
+  # Add logo if provided
+  if (!is.null(logo_path)) {
+    logo <- png::readPNG(logo_path)
+    grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+  }
+}
+
+# Example function call:
+# annotations = list(
+#   list(date = "2021-02-27", value = 92800000, label = "92.8M"),
+#   list(date = "2021-03-15", value = 85000000, label = "85.0M")
+# )
+# create_sales_time_series(df = your_dataframe, target_year = 2021, annotations = annotations, logo_path = "./path/to/logo.png
+
+```
+
+
+
+
+
+```{r, out.height='80%'}
+annotations =list(list(date = "2021-11-27", value = 106606320, label = "106.61M"))
+create_sales_time_series(df = final_sales_data, 
+                         target_year = 2021, 
+                         annotations = annotations,
+                          logo_path = "./img/nt_logo.png")
+
+ggsave("plot.pdf")
+```
+
+
+
+
+```{r, out.height='80%'}
+create_sales_time_series(
+  df = final_sales_data, 
+  target_year = 2022, 
+  annotations = list(list(date = "2022-11-30", value = 110241600, label = "110.24M")),
+  logo_path = "./img/nt_logo.png"
+)
+ggsave("plot.pdf")
+```
+```{r, out.height='80%'}
+create_sales_time_series(
+  df = final_sales_data, 
+  target_year = 2023, 
+  annotations = list(list(date = "2023-02-27", value = 92894844, label = "92.89M"),
+                      list(date = "2023-11-28", value = 98630628, label = "98.63M")),
+  logo_path = "./img/nt_logo.png"
+)
+```
+
+
+```{r}
+plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL, logo_path = "./img/nt_logo.png") {
+  
+  custom_labels <- function(x) {
+    ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
+           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
+                  paste0(x)))
+  }
+  
+  
+  data <- df%>%filter(
+                if (is.null(target_city) & is.null(target_year)) { year %in% c(2021,2022,2023)} 
+                else if (is.null(target_year)) { City == target_city }
+                else if (is.null(target_city)) { year == target_year }
+                  else { year == target_year & City == target_city }
+              ) %>%
+          #filter(year == target_year) %>%
+          group_by(Branch) %>%
+          arrange(Branch) %>%
+          summarise(Total = sum(Revenue_VAT, na.rm = TRUE))%>%
+          mutate(label = ifelse(Total > 500e6, custom_labels(Total), NA))
+  
+          # IF you need to visualize all numbers
+          #mutate(label_pos = ifelse(Total > 500e6, Total - 50e6, Total + 50e6), hjust = ifelse(Total > 500e6, 1.1, -0.1))
+  
+   p <-   ggplot(data = data, aes(x = reorder(Branch, Total), y = Total))+
+          geom_bar(stat = "identity", fill='#0554a4')+ 
+          geom_text(data = filter(data, !is.na(label)), 
+                   aes(label = label, y = Total),
+                   hjust = 1.01, color = "white", size = 3.5)+
+          scale_y_continuous(labels = custom_labels)+
+          labs(title="Sales by Shop", y="Revenue by Millions", 
+               x = NULL, subtitle = paste(target_year, '\n', target_city),)+theme_minimal()+
+          theme(plot.margin = unit(c(0.5, 0.5, 1.5, 0.5), "lines"))
+   
+   
+   print(p+ coord_flip())
+    # Add logo if provided
+  if (!is.null(logo_path)) {
+    logo <- png::readPNG(logo_path)
+    grid::grid.raster(logo, x = 0.075, y = 0.001, just = c('left', 'bottom'), width = unit(1, 'inches'))
+  }
+   }
+```
+
+
+# Overall sales by shop
+```{r}
+plot_sales_by_branch(
+  df = final_sales_data, 
+  target_year = 2021
+)
+```
+
+
+```{r}
+plot_sales_by_branch(
+  df = final_sales_data, 
+  target_year = 2022
+)
+```
+
+```{r}
+plot_sales_by_branch(
+  df = final_sales_data, 
+  target_year = 2023
+)
+```
+
+
+
+# SAles by shop in Yerevan
+
+
+```{r}
+plot_sales_by_branch(
+  df = final_sales_data, 
+  target_city = "Yerevan"
+)
+```
+
+
+Heatmap of salse years and months 
+
+
+```{r}
+heatmap_df <- final_sales_data
+heatmap_df <- heatmap_df %>%
+  mutate(
+    month = factor(month(sale_date, label = TRUE, abbr = FALSE), levels = month.name)  # Ensure full month names and correct order
+  ) %>%
+  group_by(year, month) %>%
+  summarise(Total_Revenue = sum(Revenue_VAT, na.rm = TRUE), .groups = 'drop')
+heatmap_df$year <- factor(heatmap_df$year)
+
+label_millions <- function(x) {
+  ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
+           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
+                  paste0(x)))
+}
+p <- ggplot(heatmap_df, aes(x = year, y = month, fill = Total_Revenue)) +
+  geom_tile(color = "white") +  # Adds the tiles
+  scale_fill_gradient(low = "#0554a4", high = "#c90c0f", labels = label_millions) +  # Use custom labels
+  labs(title = "Monthly Revenue by Year", x = "", y = "", fill = "Revenue with VAT") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),  # Ensure x-axis labels are horizontal and centered
+    axis.text.y = element_text(angle = 0),  # Ensure y-axis labels are horizontal
+    plot.title = element_text(hjust = 0.5),  # Center the title
+    legend.position = "right"
+  ) +
+  scale_x_discrete(position = "top")  # Move x-axis to the top
+
+# Print the plot
+print(p)
+
+grid::grid.raster(logo, x = 0.8, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+```
+
+Area Chart
+
+```{r}
+custom_labels <- function(x) {
+    ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
+           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
+                  paste0(x)))
+  }
+```
+
+
+```{r}
+df_surfacegraph <- final_sales_data
+df_surfacegraph <- df_surfacegraph %>%
+  mutate(
+    month = factor(month.abb[month], levels = month.abb, ordered = TRUE),  # Convert numeric month to abbreviated month names
+    year = as.factor(year)  # Ensure year is a factor for plotting
+  ) %>%
+  group_by(year, month) %>%
+  summarise(Total_Revenue = sum(Revenue_VAT, na.rm = TRUE), .groups = 'drop')
+
+df_surfacegraph <- df_surfacegraph %>%
+  mutate(year = factor(year, levels = c("2023", "2022", "2021"))) %>%  # Reverse order so smallest revenue is plotted last
+  arrange(desc(year))
+```
+
+
+```{r}
+p <- ggplot(df_surfacegraph, aes(x = month, y = Total_Revenue , fill = year, group = year)) +
+  geom_area(position = "identity", alpha = 0.6) +  # No stacking, overlay areas
+  scale_x_discrete() +
+  scale_y_continuous(labels = custom_labels)+
+  scale_fill_manual(values = custom_color_palette(3)) +
+  labs(title = "Total Sales by Month and Year", x = "Month", y = "Total Revenue", fill = "Year") +
+  theme_minimal() +
+  theme(  axis.text.y = element_text(color = "black"), 
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+
+print(p)
+
+grid::grid.raster(logo, x = 0.87, y = 0.08, just = c('left', 'bottom'), width = unit(0.9, 'inches'))
+```
+# Revenue by city Without Yerevan
+
+```{r}
+city_revenue <- final_sales_data
+
+city_revenue$City_Group <- with(city_revenue, ifelse(City == "Yerevan", "Yerevan", "Other Cities"))
+
+# Now, create a summary data frame with no implicit grouping
+city_revenue <- city_revenue %>%
+  group_by(City_Group, City) %>%
+  summarise(Total_Revenue = sum(Revenue_VAT, na.rm = TRUE), .groups = 'drop') 
+```
+
+
+```{r}
+
+# Plot using ggplot2
+city_revenue  %>%
+  filter(City != "Yerevan") %>%
+  ggplot(aes(x = reorder(City,-Total_Revenue), y = Total_Revenue)) +
+  geom_bar(stat = "identity", fill = "#0554a4") +  # Use 'identity' to indicate bar heights are given in the data
+  theme_minimal() +
+  scale_y_continuous(labels = custom_labels)+
+  scale_fill_manual(values = default_palette) +
+  labs(title = 'Total Revenue by City (Excluding Yerevan)', x = 'City', y = 'Total Revenue') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
+
+```
+#comparing yerevan with other cities
+# PRobabaly will remove this graph not so good
+lets try treemap 
+
+```{r}
+p <- ggplot(city_revenue, aes(x = City_Group, y = Total_Revenue, fill = City)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = 'Total Revenue for Yerevan and Other Cities', x = '', y = 'Total Revenue') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5)) +
+  scale_fill_manual(values = custom_color_palette(12))
+
+# Display the plot
+print(p)
+```
+
+
+
+```{r}
+  treemap(city_revenue,
+  index = "City",          # The column that identifies each rectangle
+  vSize = "Total_Revenue", # The column that determines the area size of each rectangle
+  vColor = "Total_Revenue",# The column that determines the color scale
+  title = "Revenue by City",
+  fontsize.title = 14,
+  palette = custom_color_palette(11)   # Choose a color palette
+)
+grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
+```
+
+
+
+
+```{r}
+city_revenue %>% 
+  filter(City != "Yerevan") %>%
+  treemap(
+  index = "City",          # The column that identifies each rectangle
+  vSize = "Total_Revenue", # The column that determines the area size of each rectangle
+  vColor = "Total_Revenue",# The column that determines the color scale
+  title = "Revenue by City Without Yerevan",
+  fontsize.title = 14,
+  palette = custom_color_palette(11)   # Choose a color palette
+)
+grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave("plot.pdf")
+```
+```{r}
+final_sales_data
+```
+
+
+```{r}
+weekdays_order <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+data_summary <- final_sales_data %>%
+  group_by(year, day_name, City) %>%
+  summarise(Total_Revenue = sum(Revenue_VAT), .groups = 'drop') %>%
+  arrange(year, day_name)  
+
+data_summary <- data_summary %>%
+  mutate(City = ifelse(City == "Yerevan", "Yerevan", "Other Cities"),
+         day_name = factor(day_name, levels = weekdays_order))
+
+```
+
+
+```{r}
+p <- ggplot(data_summary, aes(x = day_name, y = Total_Revenue, fill = City)) +
+  geom_bar(stat = "identity", position = "stack") +
+  facet_wrap(~year, scales = "free_x") +
+  scale_y_continuous(labels = custom_labels) +
+  scale_fill_manual(values = c("Yerevan" = "#0554a4", "Other Cities" = "#c90c0f")) +
+  labs(title = "Average Sales by Weekday Across Cities", x = "Weekday", y = "Revenue in Millions") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
+
+# Include the logo as previously described
+logo_file <- "./img/nt_logo.png"  # Path to your logo file
+logo <- png::readPNG(logo_file)
+
+# Print the plot
+print(p)
+
+grid::grid.raster(logo, x = 0.85, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+
+
+
+
+```{r}
+library(raster)
+library(rgdal)
+library(cartography)
+```
+
+
+```{r}
+#arm <- readOGR('Data/Armenia_Marzes')
+#class(arm)
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+
+
+```{r}
+# 
+# library(ggstatsplot)
+# library(tibble)
+# 
+# # Comparison between sexes
+# 
+# # edit from here
+# y <- "Revenue_VAT"
+# cols <- 4:8 # the 4 continuous dependent variables
+# type <- "parametric" # given the large number of observations, we use the parametric version
+# paired <- FALSE # FALSE for independent samples, TRUE for paired samples
+# # edit until here
+# 
+# # edit at your own risk
+# plotlist <-
+#   purrr::pmap(
+#     .l = list(
+#       data = list(as_tibble(final_sales_data)),
+#       x = as.list(colnames(final_sales_data)[cols]),
+#       y = y,
+#       plot.type = "box", # for boxplot
+#       type = type, # parametric or nonparametric
+#       pairwise.comparisons = TRUE, # to run post-hoc tests if more than 2 groups
+#       pairwise.display = "significant", # show only significant differences
+#       bf.message = FALSE, # remove message about Bayes Factor
+#       centrality.plotting = FALSE # remove central measure
+#     ),
+#     .f = ifelse(paired, # automatically use ggwithinstats if paired samples, ggbetweenstats otherwise
+#       ggstatsplot::ggwithinstats,
+#       ggstatsplot::ggbetweenstats
+#     )
+#   )
+# 
+# # print all plots together with statistical results
+# for (i in 1:length(plotlist)) {
+#   print(plotlist[[i]])
+# }
+# 
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+```
+
+
