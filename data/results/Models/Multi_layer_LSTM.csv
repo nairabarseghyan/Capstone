@@ -1,0 +1,2 @@
+model_name,mae_train,mae_val,mape_train,mape_val,rmse_train,rmse_val,r2_train,r2_val
+Multi_layer_LSTM,9531891.0,11064210.0,89.08622860908508,50.16024708747864,12829210.0,15249704.0,0.5064447202521823,0.4324118593845795
