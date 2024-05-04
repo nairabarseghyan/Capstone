@@ -169,3 +169,6 @@ data/results/Predictions/*
 
 models/ensemble_model.sav
 
+# ignore macos files
+*.DS_Store
+
