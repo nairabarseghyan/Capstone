@@ -1,0 +1,2 @@
+model_name,mae_train,mae_val,mape_train,mape_val,rmse_train,rmse_val,r2_train,r2_val
+zero_shot_lag_llama,30370612.0,42030468.0,1.0,1.0,35469756.31896173,46549483.64615389,-2.7473726386324424,-4.413158429693536

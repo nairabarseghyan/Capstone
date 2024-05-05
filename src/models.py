@@ -209,7 +209,7 @@ class LSTM2(nn.Module):
 
 
 
-def lag_llama_estiamtor(device, prediction_length, num_samples, LagLlamaEstimator):
+def lag_llama_estiamtor(device, prediction_length,  num_samples, LagLlamaEstimator):
     ckpt = torch.load("./lag-llama.ckpt", map_location=device)
     estimator_args = ckpt["hyper_parameters"]["model_kwargs"]
 
@@ -220,7 +220,6 @@ def lag_llama_estiamtor(device, prediction_length, num_samples, LagLlamaEstimato
 
         # adjust as needed
 
-        # distr_output="neg_bin",
         # scaling="mean",
         nonnegative_pred_samples=True,
         aug_prob=0,
@@ -234,12 +233,6 @@ def lag_llama_estiamtor(device, prediction_length, num_samples, LagLlamaEstimato
         time_feat=estimator_args["time_feat"],
         device = device,
 
-        # rope_scaling={
-        #     "type": "linear",
-        #     "factor": max(
-        #         1.0, (context_length + prediction_length) / estimator_args["context_length"]
-        #     ),
-        # },
 
         batch_size=64,
         num_parallel_samples=num_samples,

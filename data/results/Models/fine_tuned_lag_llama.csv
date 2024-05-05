@@ -1,0 +1,2 @@
+model_name,mae_val,mape_val,rmse_val,r2_val
+fine_tuned_lag_llama,42030468.0,1.0,46549483.64615389,-4.413158429693536

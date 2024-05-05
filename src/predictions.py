@@ -65,12 +65,12 @@ def get_lag_llama_predictions(
     dataset, prediction_length, LagLlamaEstimator, num_samples=100, predictor=None, 
 ):
     ckpt = torch.load(
-        "./lag-llama/lag-llama.ckpt", map_location=llama_device
+        "./lag-llama.ckpt", map_location=llama_device
     )
     estimator_args = ckpt["hyper_parameters"]["model_kwargs"]
 
     estimator = LagLlamaEstimator(
-        ckpt_path="./lag-llama/lag-llama.ckpt",
+        ckpt_path="./lag-llama.ckpt",
         prediction_length=prediction_length,
 
         # pretrained length
@@ -118,7 +118,7 @@ def transfrom_lag_llama_predictions(forecasts, tss, prediction_length):
     all_preds = pd.concat(all_preds, ignore_index=True)
     
     valid = tss[0][-prediction_length:]
-    valid.index = pd.to_datetime(valid.index)
+    valid.index = valid.index.to_timestamp()
     
     all_preds.merge(valid, left_on=['date'], right_index=True, how='left')
     
