@@ -1,5 +1,5 @@
 ---
-title: "graph_tests"
+title: "Visualizations"
 author: "Naira Maria Barseghyan"
 date: "`r Sys.Date()`"
 output: pdf_document
@@ -7,7 +7,6 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
 library(lubridate)
 library(ggplot2)
 library(dplyr)
@@ -28,7 +27,8 @@ library(shadowtext)
 library(treemap)
 library(tidyverse)
 library(rstatix)
-
+library(sf)
+library(patchwork)
 ```
 
 ```{r}
@@ -44,6 +44,11 @@ default_palette <- custom_color_palette(10)
 #color_points <- c("#0554a4", "#999999","#061735","#c90c0f") 
 ```
 
+```{r}
+PROJECT_PATH <- "/Users/nairabarseghyan/Desktop/project_name/"
+FIGURES_PATH <- "/Users/nairabarseghyan/Desktop/project_name/reports/figures/"
+DATA_PATH <- "/Users/nairabarseghyan/Desktop/project_name/data/"
+```
 
 # Importing preprocessing functions
 ```{r}
@@ -52,25 +57,29 @@ source("./preprocessing.R")
 
 # Importing Logo for the graphs
 ```{r}
-logo <- image_read("./img/nt_logo.png")
+logo <- image_read(paste0(PROJECT_PATH, "data/external/nt_logo.png"))
 ```
 
 # Reading and creating necessary datasets 
 
 ```{r}
-sales_raw <- read.csv("data/translated_data/csv/sales_whole.csv")
-holidays <- read.csv("data/translated_data/csv/armenian_holidays.csv")
+sales_raw <- read.csv(paste0(DATA_PATH, "processed/sales_whole.csv"))
 ```
 # Preprocessing sales data
 
 ```{r}
-sales_data_preprocessed <- process_sales_data(sales_raw, holidays)
+sales_data_preprocessed <- process_sales_data(sales_raw)
 ```
 
 # adding feutures to the data
 ```{r}
-final_sales_data <- add_calendar_features(sales_data_preprocessed)
+calendar_sales_data <- add_calendar_features(sales_data_preprocessed)
 ```
+
+```{r}
+final_sales_data <- add_sales_proxies(calendar_sales_data)
+```
+
 
 # Feuture engenereeing 
 
@@ -144,7 +153,7 @@ print(anova_dataframe)
 ```
 
 ```{r}
-write.csv(anova_dataframe, "./anova_results.csv", row.names = FALSE)
+write.csv(anova_dataframe, paste0(DATA_PATH, "results/anova_results.csv"), row.names = FALSE)
 ```
 
 ```{r}
@@ -160,7 +169,7 @@ column_info <- data.frame(
 )
 
 column_info
-write.csv(column_info, "./attributes_info.csv", row.names = FALSE)
+write.csv(column_info, paste0(DATA_PATH, "results/attributes_info.csv"), row.names = FALSE)
 ```
 
 
@@ -168,11 +177,19 @@ write.csv(column_info, "./attributes_info.csv", row.names = FALSE)
 knitr::kable(column_info, format = "markdown")
 ```
 
+# Helper functions
+```{r}
+label_millions <- function(x) {
+  ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
+           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
+                  paste0(x)))
+}
+```
 
 # EDA
 
 ```{r}
-create_sales_time_series <- function(df, target_year, annotations, logo_path= "./img/nt_logo.png", custom_subtitle = NULL) {
+create_sales_time_series <- function(df, target_year, annotations, custom_subtitle = NULL) {
   # Filter the data for the specified year using the existing 'year' column
   sales_data <- df %>%
     filter(year == target_year) %>%
@@ -188,13 +205,6 @@ create_sales_time_series <- function(df, target_year, annotations, logo_path= ".
     value = sapply(annotations, function(x) x$value),
     label = sapply(annotations, function(x) x$label)
   )
-
-  # Custom label function for Y-axis
-  custom_labels <- function(x) {
-    ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
-           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
-                  paste0(x)))
-  }
 
   # Generate a dynamic subtitle if not provided
   dynamic_subtitle <- if (is.null(custom_subtitle) && length(annotations) > 0) {
@@ -220,21 +230,7 @@ create_sales_time_series <- function(df, target_year, annotations, logo_path= ".
 
   # Print the plot
   print(p)
-
-  # Add logo if provided
-  if (!is.null(logo_path)) {
-    logo <- png::readPNG(logo_path)
-    grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-  }
-}
-
-# Example function call:
-# annotations = list(
-#   list(date = "2021-02-27", value = 92800000, label = "92.8M"),
-#   list(date = "2021-03-15", value = 85000000, label = "85.0M")
-# )
-# create_sales_time_series(df = your_dataframe, target_year = 2021, annotations = annotations, logo_path = "./path/to/logo.png
-
+ }
 ```
 
 
@@ -243,46 +239,42 @@ create_sales_time_series <- function(df, target_year, annotations, logo_path= ".
 
 ```{r, out.height='80%'}
 annotations =list(list(date = "2021-11-27", value = 106606320, label = "106.61M"))
-create_sales_time_series(df = final_sales_data, 
+sales_ts_2021 <- create_sales_time_series(df = final_sales_data, 
                          target_year = 2021, 
-                         annotations = annotations,
-                          logo_path = "./img/nt_logo.png")
-
-ggsave("plot.pdf")
+                         annotations = annotations)
+grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"time_series_2021_sales.pdf"))
 ```
 
 
 
 
 ```{r, out.height='80%'}
-create_sales_time_series(
+sales_ts_2022 <-create_sales_time_series(
   df = final_sales_data, 
   target_year = 2022, 
-  annotations = list(list(date = "2022-11-30", value = 110241600, label = "110.24M")),
-  logo_path = "./img/nt_logo.png"
+  annotations = list(list(date = "2022-11-30", value = 110241600, label = "110.24M"))
 )
+grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ggsave("plot.pdf")
+ggsave(paste0(FIGURES_PATH,"time_series_2022_sales.pdf"))
 ```
+
 ```{r, out.height='80%'}
-create_sales_time_series(
+sales_ts_2023 <-create_sales_time_series(
   df = final_sales_data, 
   target_year = 2023, 
   annotations = list(list(date = "2023-02-27", value = 92894844, label = "92.89M"),
-                      list(date = "2023-11-28", value = 98630628, label = "98.63M")),
-  logo_path = "./img/nt_logo.png"
+                      list(date = "2023-11-28", value = 98630628, label = "98.63M"))
 )
+grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"time_series_2023_sales.pdf"))
 ```
 
 
+
 ```{r}
-plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL, logo_path = "./img/nt_logo.png") {
-  
-  custom_labels <- function(x) {
-    ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
-           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
-                  paste0(x)))
-  }
-  
+plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL) {
   
   data <- df%>%filter(
                 if (is.null(target_city) & is.null(target_year)) { year %in% c(2021,2022,2023)} 
@@ -304,18 +296,13 @@ plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL, logo_
           geom_text(data = filter(data, !is.na(label)), 
                    aes(label = label, y = Total),
                    hjust = 1.01, color = "white", size = 3.5)+
-          scale_y_continuous(labels = custom_labels)+
+          scale_y_continuous(labels = label_millions)+
           labs(title="Sales by Shop", y="Revenue by Millions", 
                x = NULL, subtitle = paste(target_year, '\n', target_city),)+theme_minimal()+
           theme(plot.margin = unit(c(0.5, 0.5, 1.5, 0.5), "lines"))
    
    
    print(p+ coord_flip())
-    # Add logo if provided
-  if (!is.null(logo_path)) {
-    logo <- png::readPNG(logo_path)
-    grid::grid.raster(logo, x = 0.075, y = 0.001, just = c('left', 'bottom'), width = unit(1, 'inches'))
-  }
    }
 ```
 
@@ -326,6 +313,8 @@ plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2021
 )
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_shop_2021_sales.pdf"))
 ```
 
 
@@ -334,6 +323,8 @@ plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2022
 )
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_shop_2022_sales.pdf"))
 ```
 
 ```{r}
@@ -341,6 +332,8 @@ plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2023
 )
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_shop_2023_sales.pdf"))
 ```
 
 
@@ -353,10 +346,21 @@ plot_sales_by_branch(
   df = final_sales_data, 
   target_city = "Yerevan"
 )
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_shop_yerevan_sales.pdf"))
+```
+```{r}
+
+plot_sales_by_branch(
+  df = final_sales_data
+)
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_shop_whole_sales.pdf"))
 ```
 
 
 Heatmap of salse years and months 
+
 
 
 ```{r}
@@ -391,18 +395,10 @@ p <- ggplot(heatmap_df, aes(x = year, y = month, fill = Total_Revenue)) +
 print(p)
 
 grid::grid.raster(logo, x = 0.8, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"heatmap_sales.pdf"))
 ```
 
 Area Chart
-
-```{r}
-custom_labels <- function(x) {
-    ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
-           ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
-                  paste0(x)))
-  }
-```
-
 
 ```{r}
 df_surfacegraph <- final_sales_data
@@ -424,7 +420,7 @@ df_surfacegraph <- df_surfacegraph %>%
 p <- ggplot(df_surfacegraph, aes(x = month, y = Total_Revenue , fill = year, group = year)) +
   geom_area(position = "identity", alpha = 0.6) +  # No stacking, overlay areas
   scale_x_discrete() +
-  scale_y_continuous(labels = custom_labels)+
+  scale_y_continuous(labels = label_millions)+
   scale_fill_manual(values = custom_color_palette(3)) +
   labs(title = "Total Sales by Month and Year", x = "Month", y = "Total Revenue", fill = "Year") +
   theme_minimal() +
@@ -434,6 +430,7 @@ p <- ggplot(df_surfacegraph, aes(x = month, y = Total_Revenue , fill = year, gro
 print(p)
 
 grid::grid.raster(logo, x = 0.87, y = 0.08, just = c('left', 'bottom'), width = unit(0.9, 'inches'))
+ggsave(paste0(FIGURES_PATH,"area_graph_sales_by_year.pdf"))
 ```
 # Revenue by city Without Yerevan
 
@@ -446,46 +443,36 @@ city_revenue$City_Group <- with(city_revenue, ifelse(City == "Yerevan", "Yerevan
 city_revenue <- city_revenue %>%
   group_by(City_Group, City) %>%
   summarise(Total_Revenue = sum(Revenue_VAT, na.rm = TRUE), .groups = 'drop') 
+  
 ```
 
 
-```{r}
 
+
+```{r}
 # Plot using ggplot2
 city_revenue  %>%
   filter(City != "Yerevan") %>%
   ggplot(aes(x = reorder(City,-Total_Revenue), y = Total_Revenue)) +
   geom_bar(stat = "identity", fill = "#0554a4") +  # Use 'identity' to indicate bar heights are given in the data
   theme_minimal() +
-  scale_y_continuous(labels = custom_labels)+
+  scale_y_continuous(labels = label_millions)+
   scale_fill_manual(values = default_palette) +
   labs(title = 'Total Revenue by City (Excluding Yerevan)', x = 'City', y = 'Total Revenue') +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-
+ggsave(paste0(FIGURES_PATH,"sales_by_city.pdf"))
 ```
 #comparing yerevan with other cities
-# PRobabaly will remove this graph not so good
-lets try treemap 
+## treemap 
 
-```{r}
-p <- ggplot(city_revenue, aes(x = City_Group, y = Total_Revenue, fill = City)) +
-  geom_bar(stat = "identity") +
-  theme_minimal() +
-  labs(title = 'Total Revenue for Yerevan and Other Cities', x = '', y = 'Total Revenue') +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.x = element_blank(),
-        plot.title = element_text(size = 16, face = "bold", hjust = 0.5)) +
-  scale_fill_manual(values = custom_color_palette(12))
 
-# Display the plot
-print(p)
-```
 
 
 
 ```{r}
+pdf(paste0(FIGURES_PATH,"treemap_whole.pdf"))
   treemap(city_revenue,
   index = "City",          # The column that identifies each rectangle
   vSize = "Total_Revenue", # The column that determines the area size of each rectangle
@@ -495,12 +482,14 @@ print(p)
   palette = custom_color_palette(11)   # Choose a color palette
 )
 grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
+dev.off()
 ```
 
 
 
 
 ```{r}
+pdf(paste0(FIGURES_PATH,"treemap_without_yerevan.pdf"))
 city_revenue %>% 
   filter(City != "Yerevan") %>%
   treemap(
@@ -512,11 +501,9 @@ city_revenue %>%
   palette = custom_color_palette(11)   # Choose a color palette
 )
 grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave("plot.pdf")
+dev.off()
 ```
-```{r}
-final_sales_data
-```
+
 
 
 ```{r}
@@ -538,116 +525,230 @@ data_summary <- data_summary %>%
 p <- ggplot(data_summary, aes(x = day_name, y = Total_Revenue, fill = City)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~year, scales = "free_x") +
-  scale_y_continuous(labels = custom_labels) +
+  scale_y_continuous(labels = label_millions) +
   scale_fill_manual(values = c("Yerevan" = "#0554a4", "Other Cities" = "#c90c0f")) +
   labs(title = "Average Sales by Weekday Across Cities", x = "Weekday", y = "Revenue in Millions") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
 
-# Include the logo as previously described
-logo_file <- "./img/nt_logo.png"  # Path to your logo file
-logo <- png::readPNG(logo_file)
-
 # Print the plot
 print(p)
 
 grid::grid.raster(logo, x = 0.85, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_weekday.pdf"))
 ```
 
 
 ```{r}
+number_of_sales_by_category <- final_sales_data %>%
+  group_by(Product_category) %>%
+  summarise(Total_Sold = sum(Quantity, na.rm = TRUE)) %>%
+  top_n(10, Total_Sold) %>%
+  ungroup() %>%
+  arrange(desc(Total_Sold)) %>%
+  mutate(Product_category = factor(Product_category, levels = Product_category))
 ```
 
 
 ```{r}
+sales_qunatity_by_category <- ggplot(number_of_sales_by_category, aes(x = Product_category, y = Total_Sold)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
+  coord_flip() +
+  scale_y_continuous(labels = label_millions) +
+  #scale_fill_manual(values = custom_color_palette((15))) +
+  labs(title = "Total Number of Product Purchases by Category",
+       x = "", y = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 12))
+
+# Print the plot
+print(sales_qunatity_by_category)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_qunatity_by_category.pdf"))
 ```
 
+
+```{r}
+  revenue_sales_by_category <- final_sales_data %>%
+  group_by(Product_category) %>%
+  summarise(Total_Rev = sum(Revenue_VAT, na.rm = TRUE)) %>%
+  top_n(10, Total_Rev) %>%
+  ungroup() %>%
+  arrange(desc(Total_Rev)) %>%
+  mutate(Product_category = factor(Product_category, levels = Product_category))
+```
+
+
+```{r}
+revenue_by_category <- ggplot(revenue_sales_by_category, aes(x = Product_category, y = Total_Rev)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
+  coord_flip() +
+  scale_y_continuous(labels = label_millions) +
+  labs(title = "Revenue by Category",
+       x = "", y = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 12))
+
+print(revenue_by_category)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"revenue_by_category.pdf"))
+```
+
+
+```{r}
+ggarrange(sales_qunatity_by_category, revenue_by_category, nrow = 2)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"revenue_quantity_comparison_by_category.pdf"))
+```
+
+```{r}
+top_brands <- final_sales_data %>%
+  filter(Brand != "" & !is.na(Brand)) %>%
+  group_by(Brand) %>%
+  summarise(Total_Revenue = sum(Revenue_VAT, na.rm = TRUE)) %>%
+  top_n(10, Total_Revenue) %>%
+  arrange((Total_Revenue)) %>%
+  ungroup() %>%
+  mutate(Brand = factor(Brand, levels = rev(unique(Brand))))
+```
+
+
+```{r}
+top_10_brands <- ggplot(top_brands, aes(x = Brand, y = Total_Revenue)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
+  coord_flip() +  # Flip the coordinates to make the bars horizontal
+  
+  scale_y_continuous(labels = label_millions) +
+  labs(title = "Top 10 Brands by Revenue", x = "", y = "") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        legend.title = element_blank())  # Remove the legend title
+
+t
+print(top_10_brands)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"top_10_brands.pdf"))
+```
+
+```{r}
+# Filter and prepare data for "Heating"
+Heating_data <- final_sales_data %>%
+  filter(Product_category == "Heating") %>%
+  group_by(Brand) %>%
+  summarise(Total_rev = sum(Revenue_VAT, na.rm = TRUE)) %>%
+  top_n(5, Total_rev) %>%
+  ungroup() %>%
+  arrange(desc(Total_rev)) %>%
+  mutate(Brand = factor(Brand, levels = unique(Brand)))
+
+# Filter and prepare data for "Tiles"
+Tiles_data <- final_sales_data %>%
+  filter(Product_category == "Tiles") %>%
+  group_by(Brand) %>%
+  summarise(Total_rev = sum(Revenue_VAT, na.rm = TRUE)) %>%
+  top_n(5, Total_rev) %>%
+  ungroup() %>%
+  arrange(desc(Total_rev)) %>%
+  mutate(Brand = factor(Brand, levels = unique(Brand)))
+```
+
+```{r}
+top5_Heating <-ggplot(Heating_data, aes(x = Brand, y = Total_rev)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
+  coord_flip() +  # This will flip so the highest is at the bottom due to reverse factor levels
+  scale_y_continuous(labels = label_millions) +
+  labs(title = "Top 5 Brands in Heating by Revenue",
+       x = "", y = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 12))
+
+print(top5_Heating)
+grid::grid.raster(logo, x = 0.0001, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"top_5_brands_heating.pdf"))
+```
+```{r}
+top5_Tiles <- ggplot(Tiles_data, aes(x = Brand, y = Total_rev)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
+  coord_flip() +
+  scale_y_continuous(labels = label_millions) +
+  labs(title = "Top 5 Brands in Tiles by Revenue",
+       x = "", y = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 12))
+print(top5_Tiles)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"top_5_brands_heating.pdf"))
+```
+
+```{r}
+ggarrange(top5_Heating, top5_Tiles, nrow = 2)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"top_5_tiles_heating.pdf"))
+```
+
+
+
+
+```{r}
+armenia_shapefile <- st_read(paste0(PROJECT_PATH,"Armenia_Marzes/Armenia_Marzes.shp"))
+armenia_data <- final_sales_data %>%
+  filter(Regions != "", Regions != "YEREVAN") %>%
+  group_by(Regions) %>%
+  summarise(Revenue = sum(Revenue_VAT, na.rm = TRUE))
+armenia_map <- merge(armenia_shapefile, armenia_data, by.x = "Name_Eng", by.y = "Regions", all.x = TRUE)
+```
+
+
+```{r}
+# Plotting the map for Armenia regions
+plot_armenia <- ggplot(data = armenia_map) +
+  geom_sf(aes(fill = Revenue), color = "white", size = 0.5) +
+  scale_fill_gradientn(colours = custom_color_palette(100), name = "Revenue", labels = label_millions) +
+  labs(title = "Sales Revenue by Region in Armenia") +
+  theme_minimal() 
+  
+
+# Print the plot
+print(plot_armenia)
+grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_map_armenia.pdf"))
+```
 
 
 
 
 
 ```{r}
-library(raster)
-library(rgdal)
-library(cartography)
+yerevan_shapefile <- st_read(paste0(PROJECT_PATH,"Yerevan-Districts/Yerevan-Districts.shp"))
+yerevan_data <- final_sales_data %>%
+            filter(Districts != "Other Regions") %>%
+            group_by(Districts) %>%
+            summarise(Revenue = sum(Revenue_VAT, na.rm = TRUE))
+
+yerevan_map <- merge(yerevan_shapefile, yerevan_data, by.x = "Name_en", by.y = "Districts", all.x = TRUE)
 ```
 
 
 ```{r}
-#arm <- readOGR('Data/Armenia_Marzes')
-#class(arm)
-```
+# Plotting the map for Yerevan districts
+plot_yerevan <- ggplot(data = yerevan_map) +
+  geom_sf(aes(fill = Revenue), color = "white", size = 0.5) +
+  scale_fill_gradientn(colours = custom_color_palette(100), name = "Revenue", labels = label_millions) +
+  labs(title = "Sales Revenue by District in Yerevan") +
+  theme_minimal() 
 
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-
-
-```{r}
-# 
-# library(ggstatsplot)
-# library(tibble)
-# 
-# # Comparison between sexes
-# 
-# # edit from here
-# y <- "Revenue_VAT"
-# cols <- 4:8 # the 4 continuous dependent variables
-# type <- "parametric" # given the large number of observations, we use the parametric version
-# paired <- FALSE # FALSE for independent samples, TRUE for paired samples
-# # edit until here
-# 
-# # edit at your own risk
-# plotlist <-
-#   purrr::pmap(
-#     .l = list(
-#       data = list(as_tibble(final_sales_data)),
-#       x = as.list(colnames(final_sales_data)[cols]),
-#       y = y,
-#       plot.type = "box", # for boxplot
-#       type = type, # parametric or nonparametric
-#       pairwise.comparisons = TRUE, # to run post-hoc tests if more than 2 groups
-#       pairwise.display = "significant", # show only significant differences
-#       bf.message = FALSE, # remove message about Bayes Factor
-#       centrality.plotting = FALSE # remove central measure
-#     ),
-#     .f = ifelse(paired, # automatically use ggwithinstats if paired samples, ggbetweenstats otherwise
-#       ggstatsplot::ggwithinstats,
-#       ggstatsplot::ggbetweenstats
-#     )
-#   )
-# 
-# # print all plots together with statistical results
-# for (i in 1:length(plotlist)) {
-#   print(plotlist[[i]])
-# }
-# 
-
+print(plot_yerevan)
+grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+ggsave(paste0(FIGURES_PATH,"sales_by_map_yerevan.pdf"))
 ```
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-```
 
 
