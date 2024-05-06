@@ -1,3 +1,5 @@
+#IMPORTS 
+## Libraries
 import pickle
 import numpy as np
 import pandas as pd
@@ -5,6 +7,7 @@ import os
 import time
 import torch
 
+# Import custom functionalities 
 from config import MODEL_PATH, DATA_PATH, find_device
 from data_prep import load_and_preprocess_data, split_data, general_revenue_dataframe, split_univariate_data, arrays_to_tensors, get_lag_llama_dataset
 from features import add_calendar_features, add_sales_proxies,  full_data_target_encoder
@@ -18,7 +21,7 @@ start_time = time.time()
 #                                                   Ensemble Models
 # =====================================================================================================================================
 
-#Importing trained model
+# Loading the trained ensemble model
 
 filename = 'ensemble_model.sav'
 model_path = os.path.join(MODEL_PATH, filename) 
@@ -27,7 +30,7 @@ with open(model_path, 'rb') as file:
 
 
 
-# Importing encoder
+# Loading the encoder for data preprocessing
 encoder_name = 'ml_target_encoder.pkl'
 encoder_path = os.path.join(MODEL_PATH, encoder_name)
 
@@ -36,27 +39,24 @@ with open(encoder_path, 'rb') as file:
 
 
 
-# Importing data
-
+# Loading and preparing data
 initial_data = load_and_preprocess_data(encoding=True)
 features_data_calendar = add_calendar_features(initial_data)
 features_data_proxies = add_sales_proxies(features_data_calendar)
-
-#spliting data
 train_data, val_data, test_data = split_data(features_data_proxies)
 
-#Encoding full data for predictions
+# Encoding data for model input
 train_data_encoded, val_data_encoded, test_data_encoded = full_data_target_encoder(train_data, val_data, test_data, encoder)
 
 
 
-# Making Predictions
+# Making predictions with the trained model
 train_predictions = retrieve_predictions(train_data, loaded_model)
 val_predictions = retrieve_predictions(val_data, loaded_model)
 test_predictions = retrieve_predictions(test_data, loaded_model)
 
 
-#Saving Predictions
+# Saving model predictions to CSV files
 train_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_train_predictions.csv")
 val_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_val_predictions.csv")
 test_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_test_predictions.csv")
@@ -71,8 +71,7 @@ test_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_test_predictions.csv
 seq_length = 28 #length of the sliding window
 device  = find_device()
 
-#Importing trained models
-
+# Loading trained LSTM models
 lstm_model_filename = os.path.join(MODEL_PATH, '1layer_lstm_model.pth')
 
 loaded_model_info = torch.load(lstm_model_filename)
@@ -104,36 +103,34 @@ with open(scaler_filename, 'rb') as file:
     scaler = pickle.load(file)
     
 
-# Importing data
 
-#loading data and adding necessary features
+# Loading and preparing univariate data for LSTM models
 initial_data = load_and_preprocess_data()
 univariate_data = general_revenue_dataframe(initial_data)
 univariate_data_array = np.array(univariate_data)
 
-#spliting data
 train_data, test_data = split_univariate_data(univariate_data_array)
 
 
-# Scaling (Normalizing) data
+# Normalizing data for LSTM processing
 train_data_normalized, test_data_normalized, full_data_normalized = scaler.transform(train_data),scaler.transform(test_data),scaler.transform(univariate_data_array)
 
-#Applying sliding window tp the normlized data 
+# Applying sliding window to normalized data
 trainX, trainY = sliding_windows(train_data_normalized, seq_length)
 testX, testY = sliding_windows(test_data_normalized, seq_length)
 fullX, fullY = sliding_windows(full_data_normalized, seq_length)
 
-#getting tensors of data
 
+# Converting arrays to tensors for LSTM input
 trainX_tensor, trainY_tensor, testX_tensor, testY_tensor, dataX, dataY = arrays_to_tensors(trainX, trainY, testX, testY, fullX, fullY)
 
-#get dates
+# Get dates
 date_index = pd.Series(univariate_data.index, name='date')
 dates = date_index[0:1080]
 dates_list = [date for date in dates]
 
 
-### Getting the prediction and saving it
+# Generating predictions with LSTM models and saving results
 
 ##One layer LSTM###
 
@@ -151,7 +148,7 @@ prediction_df_lstm_multi.index = pd.to_datetime(dates_list[:-29])
 prediction_df_lstm_multi.to_csv(f"{DATA_PATH}results/Predictions/LSTM_multi_predictions.csv")
 
 
-###### Evaluating the models based on predictions.
+# ===================================== Evaluating LSTM models =====================================
 
 ### One layer LSTM evaluation ###
 lstm1_X_predict_train, lstm1_Y_train= lstm_model_predictions(lstm, scaler, device, trainX_tensor, trainY_tensor)

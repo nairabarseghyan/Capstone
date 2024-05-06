@@ -1,15 +1,25 @@
+#IMPORTS 
+## Libraries
 import pandas as pd
 import numpy as np
-
 import torch
 from gluonts.dataset.common import ListDataset
 from gluonts.dataset.field_names import FieldName
 
-
+# Import custom functionalities 
 from config import DATA_PATH
 
 def load_and_preprocess_data(PATH = DATA_PATH, encoding= False):
-    
+    """
+    Load sales and holiday data, preprocess, and merge into a single DataFrame.
+
+    Parameters:
+    - PATH (str): Base directory for data files.
+    - encoding (bool): If True, add a column for branch encoding.
+
+    Returns:
+    - final_df (DataFrame): Preprocessed and merged data frame.
+    """
     sales = pd.read_csv(f'{PATH}processed/sales_whole.csv')
     holidays = pd.read_csv(f'{PATH}/external/armenian_holidays.csv', encoding="UTF-8")
     holidays.rename(columns={'Date': 'sale_date'}, inplace=True)
@@ -29,6 +39,17 @@ def load_and_preprocess_data(PATH = DATA_PATH, encoding= False):
 
 
 def split_data(data, test_size=0.10, val_size=0.10):
+    """
+    Split data into training, validation, and testing sets.
+
+    Parameters:
+    - data (DataFrame): The input data set.
+    - test_size (float): The proportion of the dataset to include in the test split.
+    - val_size (float): The proportion of the dataset to include in the validation split.
+
+    Returns:
+    - train_data, val_data, test_data (DataFrames): Training testing and validation sets.
+    """
     
     test_val_ratio = test_size + val_size
     val_ratio = val_size
@@ -45,9 +66,17 @@ def split_data(data, test_size=0.10, val_size=0.10):
 
 
 def split_univariate_data(data):
+    """
+    Splits univariate data set into training and testing sets.
+
+    Parameters:
+    - data (DataFrame): The data set to split.
+
+    Returns:
+    - train_data, test_data (DataFrames): Training and testing sets.
+    """
+    
     train_size = int(len(data) * 0.8)
-    
-    
     train_data = data[:train_size]
     test_data = data[train_size:]
     
@@ -55,6 +84,16 @@ def split_univariate_data(data):
     
     
 def get_x_y(train_data, val_data, test_data, removing = ['Revenue']):
+    """
+    Prepare feature matrices (X) and target vectors (y) for training, validation, and testing.
+
+    Parameters:
+    - train_data, val_data, test_data (DataFrame): Input data sets.
+    - removing (list): Columns to exclude from feature matrices.
+
+    Returns:
+    - Feature matrices and target vectors for all data sets.
+    """
     
     train_X = train_data.drop(columns = removing)
     validate_X = val_data.drop(columns = removing)
@@ -68,7 +107,15 @@ def get_x_y(train_data, val_data, test_data, removing = ['Revenue']):
 
 
 def general_revenue_dataframe(data):
-    # saving only sales column 
+    """
+    Aggregate revenue data by date.
+
+    Parameters:
+    - data (DataFrame): Input data frame with 'Date' and 'Revenue' columns.
+
+    Returns:
+    - daily_revenue_df (DataFrame): Aggregated daily revenue data.
+    """
 
     df = data[['Date', 'Revenue']].copy()
     df['Date'] = pd.to_datetime(df['Date'])
@@ -80,7 +127,15 @@ def general_revenue_dataframe(data):
 
 
 def arrays_to_tensors(trainX, trainY, testX, testY, fullX, fullY):
-    
+    """
+    Convert arrays to PyTorch tensors for training and testing.
+
+    Parameters:
+    - trainX, trainY, testX, testY, fullX, fullY (array-like): Arrays to be converted.
+
+    Returns:
+    - Corresponding PyTorch tensors for all inputs.
+    """
     trainX_tensor = torch.Tensor(trainX)
     trainY_tensor = torch.Tensor(trainY)
     testX_tensor = torch.Tensor(testX)
@@ -92,6 +147,17 @@ def arrays_to_tensors(trainX, trainY, testX, testY, fullX, fullY):
 
 
 def get_lag_llama_dataset(dataset, frequency):
+    """
+    Prepare a dataset for the lag-llama model.
+
+    Parameters:
+    - dataset (DataFrame): The input data frame.
+    - frequency (str): The frequency of the time series data.
+
+    Returns:
+    - backtest_dataset (ListDataset): Dataset formatted for GluonTS models.
+    """
+    
     # avoid mutations
     dataset = dataset.copy()
 

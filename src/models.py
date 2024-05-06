@@ -1,4 +1,4 @@
-# Importing libraries
+#IMPORTS 
 
 #### ML libraries
 from sklearn.linear_model import LinearRegression
@@ -19,12 +19,14 @@ from itertools import cycle
 from fastprogress import progress_bar
 
     
-
+# Import custom functionalities 
 from evaluate import evaluate_model
 from config import SEED, seed_everything, find_device
 
+# Set the seed for reproducibility
 seed_everything(SEED)
 
+# Find the appropriate device (CPU or GPU)
 device  = find_device()
     
 # =====================================================================================================================================
@@ -34,6 +36,14 @@ device  = find_device()
 
 # Benchmarking function for model testing
 def ML_model_test(X_train, y_train, X_val, y_val):
+    """
+    Tests and benchmarks multiple machine learning models.
+
+    Parameters:
+    - X_train, y_train: Training features and labels.
+    - X_val, y_val: Validation features and labels.
+    """
+    
     models = {
         "MLR": LinearRegression(),
         "DT": DecisionTreeRegressor(random_state=SEED),
@@ -57,6 +67,17 @@ def ML_model_test(X_train, y_train, X_val, y_val):
         
 # Benchmarking
 def ML_model_ensemble(X_train, y_train, X_val, y_val):
+    """
+    Demonstrates an ensemble model approach with stacking.
+
+    Parameters:
+    - X_train, y_train: Training features and labels.
+    - X_val, y_val: Validation features and labels.
+
+    Returns:
+    - List of trained models.
+    """
+    
     models = {}
     models["RF"] = RandomForestRegressor(random_state=SEED, n_jobs=-1)
     models["XGB"] = XGBRegressor(random_state=SEED)
@@ -100,6 +121,17 @@ def ML_model_ensemble(X_train, y_train, X_val, y_val):
 
 ###  This function creates a sliding window or sequences of 28 days and one day label ####
 def sliding_windows(data, seq_length):
+    """
+    Generates sliding windows for sequence data, for time-series forecasting.
+
+    Parameters:
+    - data (np.array): Sequential data.
+    - seq_length (int): Length of the sliding window.
+
+    Returns:
+    - Tuple of numpy arrays (X, y) for model training.
+    """
+    
     x = []
     y = []
 
@@ -112,6 +144,10 @@ def sliding_windows(data, seq_length):
     return np.array(x),np.array(y)
 
 class RMSELoss(nn.Module):
+    """
+    Custom Root Mean Squared Error loss module.
+    """
+    
     def __init__(self):
         super().__init__()
         self.mse = nn.MSELoss()
@@ -120,7 +156,15 @@ class RMSELoss(nn.Module):
         return torch.sqrt(self.mse(yhat,y))
 
 class LSTM(nn.Module):
+    """
+    A Long Short-Term Memory (LSTM) network for sequence modeling.
 
+    Parameters:
+    - num_classes (int): Number of classes (output size).
+    - input_size (int): Size of input features.
+    - hidden_size (int): Number of features in the hidden state.
+    - num_layers (int): Number of recurrent layers.
+    """
     def __init__(self, num_classes, input_size, hidden_size, num_layers):
         super(LSTM, self).__init__()
         
@@ -155,6 +199,12 @@ class LSTM(nn.Module):
 
 
 def init_weights(m):
+    """
+    Initializes weights of the LSTM model uniformly.
+
+    Parameters:
+    - m (torch.nn.Module): Model or layer to initialize.
+    """
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
 
@@ -162,7 +212,24 @@ def init_weights(m):
 
 
 class LSTM2(nn.Module):
+    """
+    A simplified Long Short-Term Memory (LSTM) network class designed for sequence modeling,
+    specifically customized for handling single sample batches with a focus on the final LSTM state.
 
+    Attributes:
+    - num_classes (int): Number of output classes or features.
+    - input_size (int): Number of input features.
+    - hidden_size (int): Number of features in the hidden state of the LSTM.
+    - num_layers (int): Number of layers in the LSTM stack.
+    - batch_size (int): Batch size for processing, set to 1 for single sample processing.
+    - LSTM2 (LSTM): The LSTM layer.
+    - fc (Linear): Linear layer to map from hidden state to output.
+    - dropout (Dropout): Dropout layer for regularization.
+
+    Methods:
+    - forward(x): Defines the forward pass of the LSTM model.
+    """
+    
     def __init__(self, num_classes, input_size, hidden_size, num_layers):
         super(LSTM2, self).__init__()
         
@@ -180,7 +247,18 @@ class LSTM2(nn.Module):
         
         self.fc = nn.Linear(hidden_size, num_classes)
         self.dropout = nn.Dropout(p=0.2)
+        
     def forward(self, x):
+        """
+        Perform a forward pass of the LSTM2 model using the input tensor x.
+
+        Parameters:
+        - x (Tensor): Input tensor of shape (batch_size, sequence_length, input_size).
+
+        Returns:
+        - Tensor: Output tensor of shape (batch_size, num_classes).
+        """
+        
         h_1 = Variable(torch.zeros(
             self.num_layers, x.size(0), self.hidden_size).to(device))
          
@@ -196,8 +274,10 @@ class LSTM2(nn.Module):
         
         final_state = hn.view(self.num_layers, x.size(0), self.hidden_size)[-1]
         #print("final state shape is:",final_state.shape)
+        
+        # Pass the final state through a linear layer and dropout
         out = self.fc(final_state)
-        #out = self.dropout(out)
+        #out = self.dropout(out) # Uncomment if dropout is desired in the output layer
         #print(out.size())
         return out
 
@@ -210,6 +290,24 @@ class LSTM2(nn.Module):
 
 
 def lag_llama_estiamtor(device, prediction_length,  num_samples, LagLlamaEstimator):
+    """
+    Initializes and configures a Lag-Llama Estimator from a saved checkpoint.
+
+    Parameters:
+    - device (torch.device): The device (CPU or GPU) to perform computations on.
+    - prediction_length (int): Number of time steps to predict into the future.
+    - num_samples (int): Number of sample paths to draw in probabilistic forecasting.
+    - LagLlamaEstimator (Class): The class of the Lag-Llama estimator.
+
+    Returns:
+    - estimator (LagLlamaEstimator): Configured Lag-Llama estimator ready for training or evaluation.
+
+    Description:
+    The function loads a pretrained model checkpoint, extracts model configuration from it,
+    and initializes a new Lag-Llama estimator with specified forecasting settings and device allocation.
+    The estimator can be further customized with different learning rates, batch sizes, and training epochs.
+    """
+    
     ckpt = torch.load("./lag-llama.ckpt", map_location=device)
     estimator_args = ckpt["hyper_parameters"]["model_kwargs"]
 

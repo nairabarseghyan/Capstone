@@ -1,8 +1,10 @@
+#IMPORTS 
+## Libraries
 import pandas as pd
 import numpy as np
 import torch
 
-
+# Import custom functionalities 
 from config import lag_llama_environment, find_device
 
 
@@ -14,6 +16,17 @@ from config import lag_llama_environment, find_device
 
 
 def retrieve_predictions(split_df, model):
+    """
+    Generate predictions from a model given a DataFrame.
+
+    Parameters:
+    - split_df (pd.DataFrame): The DataFrame containing the test or validation data.
+    - model (Model): A trained machine learning model.
+
+    Returns:
+    - pd.DataFrame: DataFrame containing predictions along with Date and Branch information.
+    """
+    
     df_copy = split_df.copy()
     X = df_copy.drop(columns=['Revenue','day_name','Date','Branch'])
     ref = df_copy[['Date', 'Branch']]
@@ -33,7 +46,19 @@ def retrieve_predictions(split_df, model):
 # =====================================================================================================================================
 
 def lstm_model_predictions(model, scaler, device, X, Y):
+    """
+    Generate and return predictions and actual values from a trained LSTM model, transforming back from normalized data.
 
+    Parameters:
+    - model (Model): A trained LSTM model.
+    - scaler (Scaler): The scaler used to normalize the data.
+    - device (str): The computation device ('cuda', 'mps', 'cpu').
+    - X (torch.Tensor): The input features.
+    - Y (torch.Tensor): The target values.
+
+    Returns:
+    - Tuple: A tuple containing arrays for predicted and actual values.
+    """
     #model.eval()
     X_predict = model(X.to(device))
     X_predict = X_predict.cpu().data.numpy()
@@ -64,6 +89,20 @@ llama_device = torch.device(find_device())
 def get_lag_llama_predictions(
     dataset, prediction_length, LagLlamaEstimator, num_samples=100, predictor=None, 
 ):
+    """
+    Generate predictions using the Lag-Llama estimator.
+
+    Parameters:
+    - dataset (Dataset): The dataset for making predictions.
+    - prediction_length (int): Number of time steps to predict.
+    - LagLlamaEstimator (Estimator Class): The Lag Llama estimator class.
+    - num_samples (int): Number of samples to draw.
+    - predictor (Predictor): A pre-initialized predictor, if available.
+
+    Returns:
+    - Tuple: Forecasts and time series data.
+    """
+    
     ckpt = torch.load(
         "./lag-llama.ckpt", map_location=llama_device
     )
@@ -106,6 +145,18 @@ def get_lag_llama_predictions(
 
 
 def transfrom_lag_llama_predictions(forecasts, tss, prediction_length):
+    """
+    Transform Lag-Llama model predictions into a usable format.
+
+    Parameters:
+    - forecasts (list): List of forecast objects.
+    - tss (list): List of actual time series data.
+    - prediction_length (int): The prediction horizon.
+
+    Returns:
+    - pd.DataFrame: DataFrame of median predictions and confidence intervals.
+    """
+    
     all_preds = list()
     for item in forecasts:
         family = item.item_id
