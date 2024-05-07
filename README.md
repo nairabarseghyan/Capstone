@@ -45,11 +45,11 @@ To run this project, you will need Python 3.11. It is recommended to use a virtu
 ### Obtaining the data
 This project uses confidential data of BARSIS LLC. The data is used for academic and research purposes only. Data is shared via OneDrive. \
 Data is shared only with the authorized users. \
-Autorized users: \
-Habet Madoyan \
-Natali Gzraryan \
-Aram Butavyan \
-Naira Maria Barseghyan 
+Autorized users: 
+- Habet Madoyan 
+- Natali Gzraryan 
+- Aram Butavyan 
+- Naira Maria Barseghyan 
 
 ### Testing the results
 The models presnted in this project are already trained and saved. 
@@ -90,12 +90,7 @@ For the lag-llam model open Jupyter notebook fine_tune_lag_llama.ipynb and run t
 
 **Note**  
 The stacked model file is too heavy to upload to github, you need to download the file from the shared folder. \
-Folder is shared only with the authorized users. \
-Autorized users: \
-Habet Madoyan \
-Natali Gzraryan \
-Aram Butavyan \
-Naira Maria Barseghyan 
+Folder is shared only with the authorized users. 
     
 ## Project Structure
 ```
