@@ -42,6 +42,61 @@ To run this project, you will need Python 3.11. It is recommended to use a virtu
     pip install -r requirements.txt
     ```
     
+### Obtaining the data
+This project uses confidential data of BARSIS LLC. The data is used for academic and research purposes only. Data is shared via OneDrive. \
+Data is shared only with the authorized users. \
+Autorized users: \
+Habet Madoyan \
+Natali Gzraryan \
+Aram Butavyan \
+Naira Maria Barseghyan 
+
+### Testing the results
+The models presnted in this project are already trained and saved. 
+To make inferences for the models you need to run only two files the inference.py file for inference of LSTM and ML models and lag_llama_inference.ipynb for inference of fine tuned lag-llama model.
+   ```
+   Capstone/
+   │
+   ├── src/                             # Source code for this project
+   │   ├── lag_llama_inference.ipynb    # Notebook for Lag-Llama model inference
+   │   └── inference.py       # Notebook for fine-tuning Lag-Llama model
+   └──                 
+   ```
+**Inference**  
+Open the project in your prefered IDE, set up the environment and run the following command:
+   ```bash
+      python3 inference.py
+   ```
+For the lag-llam model open Jupyter notebook lag_llama_inference.ipynb and run the cells consecutively.
+### Training/Fine-Tuning the models
+If you prefer to train/fine-tune the models on your own you ill need to run the files train_ML.py, train_LSTM.py and fine_tune_lag_llama.ipynb
+ ```
+   Capstone/
+   │
+   ├── src/                             
+   │   ├── train_ML.py                  
+   │   ├── train_LSTM.py                
+   │   └── fine_tune_lag_llama.ipynb   
+   └──                 
+   ```
+**Training**  
+Open the project in your prefered IDE, set up the environment and run the following commands one by one:
+   ```bash
+      python3 train_ML.py
+      train_LSTM.py
+   ```
+
+For the lag-llam model open Jupyter notebook fine_tune_lag_llama.ipynb and run the cells consecutively.
+
+**Note**  
+The stacked model file is too heavy to upload to github, you need to download the file from the shared folder. \
+Folder is shared only with the authorized users. \
+Autorized users: \
+Habet Madoyan \
+Natali Gzraryan \
+Aram Butavyan \
+Naira Maria Barseghyan 
+    
 ## Project Structure
 ```
 Capstone/
