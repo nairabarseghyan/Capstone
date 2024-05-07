@@ -1,0 +1,23 @@
+Attribute;Description;DataType
+sale_date;The date on which the sale occurred.;Date
+Revenue_VAT;The revenue from the sale including value-added tax.;numeric
+Quantity;The number of units sold in each transaction.;numeric
+product_type;The type or category of the product sold.;character
+Brand;The brand of the product.;character
+manufacture_country;The country where the product was manufactured.;character
+Branch;The store where the sale took place.;character
+City;The city in which the branch is located.;character
+Districts;The district of Yerevan where the branch is located.;character
+Regions;The region of Armenia where the branch location.;character
+Product_category;The broader category to which the product belongs.;character
+IsHoliday;A binary indicator (0 or 1) denoting whether the sale occurred on a holiday.;integer
+month;The month when the sale occurred.;numeric
+year;The year when the sale occurred.;numeric
+day;The day of the month on which the sale took place.;integer
+day_of_week;The day of the week represented numerically (e.g., 1 for Monday, 2 for Tuesday, etc.).;numeric
+day_name; The name of the day on which the sale took place (e.g., Monday, Tuesday).;character
+quarter;The quarter of the year during which the sale occurred.;integer
+is_weekend;A numeric indicator (0 or 1) denoting whether the sale occurred on a weekend.;numeric
+week_of_year;The specific week of the year during which the sale took place.;numeric
+sales_proxy_week;The average weekly sales revenue, adjusted for each branch and week.;numeric
+sales_proxy_month;The average monthly sales revenue, adjusted for each branch and month.;numeric

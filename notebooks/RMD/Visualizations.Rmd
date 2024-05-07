@@ -29,6 +29,16 @@ library(tidyverse)
 library(rstatix)
 library(sf)
 library(patchwork)
+library(ggcorrplot)
+```
+
+```{r, echo=FALSE}
+# packs <- c("`ae.sty'","`grfext.sty'", "`bookmark.sty'") 
+# 
+# for (i in 1:length(packs)) {     
+#     tinytex::parse_install(text = paste('! LaTeX Error: File', packs[i],'not found.'))
+# }
+
 ```
 
 ```{r}
@@ -186,7 +196,55 @@ label_millions <- function(x) {
 }
 ```
 
+```{r}
+# Function to get current device size
+get_device_size <- function() {
+  # Check if a device is open and return its size
+  if (dev.cur() != 1) {
+    return(dev.size("in"))  # Return size in inches
+  } else {
+    return(c(7, 5))  # Default size in inches if no device is open
+  }
+}
+```
 # EDA
+
+```{r}
+data_for_correlation <- final_sales_data %>%
+  select(Revenue_VAT, Quantity, sales_proxy_week, sales_proxy_month) %>%
+  na.omit()  # Removing NA values to ensure correlation calculation
+cor_matrix <- cor(data_for_correlation)
+```
+```{r}
+label_format <- function(x) {
+  sprintf("%.2f", x)
+}
+```
+
+```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "correlation_matrix_with_style.pdf"), width = current_size[1], height = current_size[2])
+plot_corr <- ggcorrplot(cor_matrix, 
+                        lab = TRUE, 
+                        lab_size = 3.5,
+                        type = "lower", # Lower triangle of the matrix
+                        hc.order = TRUE, # Hierarchical clustering to reorder the matrix
+                        outline.col = "white", # White outlines for separation
+                        colors = custom_color_palette(3), # Using the defined colors
+                        tl.srt = 45) # Text rotation for tick labels
+
+# Adding custom themes
+plot_corr <- plot_corr + 
+  theme_minimal() + 
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5)) +
+  labs(title = "Correlation Matrix",x = '', y = '')
+
+# Print the plot for a check
+print(plot_corr)
+dev.off()
+```
+
 
 ```{r}
 create_sales_time_series <- function(df, target_year, annotations, custom_subtitle = NULL) {
@@ -221,7 +279,7 @@ create_sales_time_series <- function(df, target_year, annotations, custom_subtit
     geom_point(data = annotations_df, aes(x = date, y = value), color = '#c90c0f', size = 4, shape = 21, fill = "transparent") +
     geom_text(data = annotations_df, aes(x = date, y = value, label = label), hjust = 1.2, vjust = 0, color = '#c90c0f', size = 3) +
     scale_x_datetime(date_labels = '%b', breaks = scales::date_breaks("1 month")) +
-    scale_y_continuous(labels = custom_labels) +
+    scale_y_continuous(labels = label_millions) +
     labs(title = paste("Daily Sales in", target_year),
          subtitle = dynamic_subtitle,
          x = NULL, y = "Revenue") +
@@ -234,33 +292,35 @@ create_sales_time_series <- function(df, target_year, annotations, custom_subtit
 ```
 
 
-
-
-
 ```{r, out.height='80%'}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "time_series_2021_sales.pdf"), width = current_size[1], height = current_size[2])
 annotations =list(list(date = "2021-11-27", value = 106606320, label = "106.61M"))
 sales_ts_2021 <- create_sales_time_series(df = final_sales_data, 
                          target_year = 2021, 
                          annotations = annotations)
 grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"time_series_2021_sales.pdf"))
+dev.off()
 ```
 
 
 
 
 ```{r, out.height='80%'}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "time_series_2022_sales.pdf"), width = current_size[1], height = current_size[2])
 sales_ts_2022 <-create_sales_time_series(
   df = final_sales_data, 
   target_year = 2022, 
   annotations = list(list(date = "2022-11-30", value = 110241600, label = "110.24M"))
 )
 grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave("plot.pdf")
-ggsave(paste0(FIGURES_PATH,"time_series_2022_sales.pdf"))
+dev.off()
 ```
 
 ```{r, out.height='80%'}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "time_series_2023_sales.pdf"), width = current_size[1], height = current_size[2])
 sales_ts_2023 <-create_sales_time_series(
   df = final_sales_data, 
   target_year = 2023, 
@@ -268,7 +328,7 @@ sales_ts_2023 <-create_sales_time_series(
                       list(date = "2023-11-28", value = 98630628, label = "98.63M"))
 )
 grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"time_series_2023_sales.pdf"))
+dev.off()
 ```
 
 
@@ -286,7 +346,7 @@ plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL) {
           group_by(Branch) %>%
           arrange(Branch) %>%
           summarise(Total = sum(Revenue_VAT, na.rm = TRUE))%>%
-          mutate(label = ifelse(Total > 500e6, custom_labels(Total), NA))
+          mutate(label = ifelse(Total > 500e6, label_millions(Total), NA))
   
           # IF you need to visualize all numbers
           #mutate(label_pos = ifelse(Total > 500e6, Total - 50e6, Total + 50e6), hjust = ifelse(Total > 500e6, 1.1, -0.1))
@@ -309,31 +369,37 @@ plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL) {
 
 # Overall sales by shop
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_shop_2021_sales.pdf"), width = current_size[1], height = current_size[2])
 plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2021
 )
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_shop_2021_sales.pdf"))
+dev.off()
 ```
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_shop_2022_sales.pdf"), width = current_size[1], height = current_size[2])
 plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2022
 )
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_shop_2022_sales.pdf"))
+dev.off()
 ```
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_shop_2023_sales.pdf"), width = current_size[1], height = current_size[2])
 plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2023
 )
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_shop_2023_sales.pdf"))
+dev.off()
 ```
 
 
@@ -342,20 +408,24 @@ ggsave(paste0(FIGURES_PATH,"sales_by_shop_2023_sales.pdf"))
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_shop_yerevan_sales.pdf"), width = current_size[1], height = current_size[2])
 plot_sales_by_branch(
   df = final_sales_data, 
   target_city = "Yerevan"
 )
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_shop_yerevan_sales.pdf"))
+dev.off()
 ```
-```{r}
 
+```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_shop_whole_sales.pdf"), width = current_size[1], height = current_size[2])
 plot_sales_by_branch(
   df = final_sales_data
 )
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_shop_whole_sales.pdf"))
+dev.off()
 ```
 
 
@@ -364,6 +434,8 @@ Heatmap of salse years and months
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "heatmap_sales.pdf"), width = current_size[1], height = current_size[2])
 heatmap_df <- final_sales_data
 heatmap_df <- heatmap_df %>%
   mutate(
@@ -395,12 +467,13 @@ p <- ggplot(heatmap_df, aes(x = year, y = month, fill = Total_Revenue)) +
 print(p)
 
 grid::grid.raster(logo, x = 0.8, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"heatmap_sales.pdf"))
+dev.off()
 ```
 
 Area Chart
 
 ```{r}
+
 df_surfacegraph <- final_sales_data
 df_surfacegraph <- df_surfacegraph %>%
   mutate(
@@ -417,6 +490,8 @@ df_surfacegraph <- df_surfacegraph %>%
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "area_graph_sales_by_year.pdf"), width = current_size[1], height = current_size[2])
 p <- ggplot(df_surfacegraph, aes(x = month, y = Total_Revenue , fill = year, group = year)) +
   geom_area(position = "identity", alpha = 0.6) +  # No stacking, overlay areas
   scale_x_discrete() +
@@ -430,7 +505,7 @@ p <- ggplot(df_surfacegraph, aes(x = month, y = Total_Revenue , fill = year, gro
 print(p)
 
 grid::grid.raster(logo, x = 0.87, y = 0.08, just = c('left', 'bottom'), width = unit(0.9, 'inches'))
-ggsave(paste0(FIGURES_PATH,"area_graph_sales_by_year.pdf"))
+dev.off()
 ```
 # Revenue by city Without Yerevan
 
@@ -450,7 +525,8 @@ city_revenue <- city_revenue %>%
 
 
 ```{r}
-# Plot using ggplot2
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_city.pdf"), width = current_size[1], height = current_size[2])
 city_revenue  %>%
   filter(City != "Yerevan") %>%
   ggplot(aes(x = reorder(City,-Total_Revenue), y = Total_Revenue)) +
@@ -462,7 +538,7 @@ city_revenue  %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_city.pdf"))
+dev.off()
 ```
 #comparing yerevan with other cities
 ## treemap 
@@ -472,7 +548,8 @@ ggsave(paste0(FIGURES_PATH,"sales_by_city.pdf"))
 
 
 ```{r}
-pdf(paste0(FIGURES_PATH,"treemap_whole.pdf"))
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH,"treemap_whole.pdf"), width = current_size[1], height = current_size[2])
   treemap(city_revenue,
   index = "City",          # The column that identifies each rectangle
   vSize = "Total_Revenue", # The column that determines the area size of each rectangle
@@ -489,7 +566,8 @@ dev.off()
 
 
 ```{r}
-pdf(paste0(FIGURES_PATH,"treemap_without_yerevan.pdf"))
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH,"treemap_without_yerevan.pdf"), width = current_size[1], height = current_size[2])
 city_revenue %>% 
   filter(City != "Yerevan") %>%
   treemap(
@@ -522,6 +600,8 @@ data_summary <- data_summary %>%
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_weekday.pdf"), width = current_size[1], height = current_size[2])
 p <- ggplot(data_summary, aes(x = day_name, y = Total_Revenue, fill = City)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~year, scales = "free_x") +
@@ -536,7 +616,7 @@ p <- ggplot(data_summary, aes(x = day_name, y = Total_Revenue, fill = City)) +
 print(p)
 
 grid::grid.raster(logo, x = 0.85, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_weekday.pdf"))
+dev.off()
 ```
 
 
@@ -552,6 +632,8 @@ number_of_sales_by_category <- final_sales_data %>%
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_qunatity_by_category.pdf"), width = current_size[1], height = current_size[2])
 sales_qunatity_by_category <- ggplot(number_of_sales_by_category, aes(x = Product_category, y = Total_Sold)) +
   geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
   coord_flip() +
@@ -566,7 +648,7 @@ sales_qunatity_by_category <- ggplot(number_of_sales_by_category, aes(x = Produc
 # Print the plot
 print(sales_qunatity_by_category)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_qunatity_by_category.pdf"))
+dev.off()
 ```
 
 
@@ -582,6 +664,8 @@ ggsave(paste0(FIGURES_PATH,"sales_qunatity_by_category.pdf"))
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "revenue_by_category.pdf"), width = current_size[1], height = current_size[2])
 revenue_by_category <- ggplot(revenue_sales_by_category, aes(x = Product_category, y = Total_Rev)) +
   geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
   coord_flip() +
@@ -594,14 +678,16 @@ revenue_by_category <- ggplot(revenue_sales_by_category, aes(x = Product_categor
 
 print(revenue_by_category)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"revenue_by_category.pdf"))
+dev.off()
 ```
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "revenue_quantity_comparison_by_category.pdf"), width = current_size[1], height = current_size[2])
 ggarrange(sales_qunatity_by_category, revenue_by_category, nrow = 2)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"revenue_quantity_comparison_by_category.pdf"))
+dev.off()
 ```
 
 ```{r}
@@ -617,6 +703,8 @@ top_brands <- final_sales_data %>%
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "top_10_brands.pdf"), width = current_size[1], height = current_size[2])
 top_10_brands <- ggplot(top_brands, aes(x = Brand, y = Total_Revenue)) +
   geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
   coord_flip() +  # Flip the coordinates to make the bars horizontal
@@ -631,7 +719,7 @@ top_10_brands <- ggplot(top_brands, aes(x = Brand, y = Total_Revenue)) +
 t
 print(top_10_brands)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"top_10_brands.pdf"))
+dev.off()
 ```
 
 ```{r}
@@ -647,7 +735,7 @@ Heating_data <- final_sales_data %>%
 
 # Filter and prepare data for "Tiles"
 Tiles_data <- final_sales_data %>%
-  filter(Product_category == "Tiles") %>%
+  filter(Product_category == "Tiles",Brand != "",) %>%
   group_by(Brand) %>%
   summarise(Total_rev = sum(Revenue_VAT, na.rm = TRUE)) %>%
   top_n(5, Total_rev) %>%
@@ -657,6 +745,8 @@ Tiles_data <- final_sales_data %>%
 ```
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "top_5_brands_heating.pdf"), width = current_size[1], height = current_size[2])
 top5_Heating <-ggplot(Heating_data, aes(x = Brand, y = Total_rev)) +
   geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
   coord_flip() +  # This will flip so the highest is at the bottom due to reverse factor levels
@@ -671,6 +761,7 @@ print(top5_Heating)
 grid::grid.raster(logo, x = 0.0001, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ggsave(paste0(FIGURES_PATH,"top_5_brands_heating.pdf"))
 ```
+
 ```{r}
 top5_Tiles <- ggplot(Tiles_data, aes(x = Brand, y = Total_rev)) +
   geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
@@ -683,13 +774,15 @@ top5_Tiles <- ggplot(Tiles_data, aes(x = Brand, y = Total_rev)) +
         plot.subtitle = element_text(size = 12))
 print(top5_Tiles)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"top_5_brands_heating.pdf"))
+dev.off()
 ```
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "top_5_tiles_heating.pdf"), width = current_size[1], height = current_size[2])
 ggarrange(top5_Heating, top5_Tiles, nrow = 2)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"top_5_tiles_heating.pdf"))
+dev.off()
 ```
 
 
@@ -706,7 +799,8 @@ armenia_map <- merge(armenia_shapefile, armenia_data, by.x = "Name_Eng", by.y = 
 
 
 ```{r}
-# Plotting the map for Armenia regions
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_map_armenia.pdf"), width = current_size[1], height = current_size[2])
 plot_armenia <- ggplot(data = armenia_map) +
   geom_sf(aes(fill = Revenue), color = "white", size = 0.5) +
   scale_fill_gradientn(colours = custom_color_palette(100), name = "Revenue", labels = label_millions) +
@@ -717,7 +811,7 @@ plot_armenia <- ggplot(data = armenia_map) +
 # Print the plot
 print(plot_armenia)
 grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_map_armenia.pdf"))
+dev.off()
 ```
 
 
@@ -736,6 +830,8 @@ yerevan_map <- merge(yerevan_shapefile, yerevan_data, by.x = "Name_en", by.y = "
 
 
 ```{r}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "sales_by_map_yerevan.pdf"), width = current_size[1], height = current_size[2])
 # Plotting the map for Yerevan districts
 plot_yerevan <- ggplot(data = yerevan_map) +
   geom_sf(aes(fill = Revenue), color = "white", size = 0.5) +
@@ -745,7 +841,7 @@ plot_yerevan <- ggplot(data = yerevan_map) +
 
 print(plot_yerevan)
 grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
-ggsave(paste0(FIGURES_PATH,"sales_by_map_yerevan.pdf"))
+dev.off()
 ```
 
 
