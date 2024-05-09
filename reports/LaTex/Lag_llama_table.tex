@@ -1,0 +1,16 @@
+% Please add the following required packages to your document preamble:
+% \usepackage{graphicx}
+\begin{table}[]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lll}
+\hline
+\textbf{Metrics} & \begin{tabular}[c]{@{}l@{}}Fine-Tuned\\ Inference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Zero-Shot\\ Inference\end{tabular} \\ \hline
+MAE  & \textbf{11.029}   & 18.049 \\
+MAPE & \textbf{0.857 \%} & 170.7  \\
+RMSE & \textbf{15.702}   & 21.893 \\ \hline
+\end{tabular}%
+}
+\caption{ Performance Comparison Between Fine-Tuned and Zero-Shot Inference. The MAE and RMSE values are presented in millions, e.g., an MAE of 1.831 represents 1,831,000. \cite{inferrence_lag_llama}}
+\label{tab:Lag_llama_table}
+\end{table}

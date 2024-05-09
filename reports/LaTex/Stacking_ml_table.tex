@@ -1,0 +1,27 @@
+% \usepackage{booktabs}
+% \usepackage{graphicx}
+\begin{table}[]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}cllcccc@{}}
+\toprule
+ &
+  \multicolumn{2}{c}{\textbf{Stacking Regressor}} &
+  \multicolumn{2}{c}{XGBoost Regressor} &
+  \multicolumn{2}{c}{\textbf{Random Forest Regressor}} \\ \midrule
+\textbf{Metrics} &
+  \multicolumn{1}{c}{Train} &
+  \multicolumn{1}{c}{Validation} &
+  Train &
+  Validation &
+  Train &
+  Validation \\ \midrule
+MAE       & 3946  & 7253  & 6396  & 6816  & \textbf{2660}  & \textbf{6566}  \\
+MAPE      & 174\% & 278\% & 120\% & 145\% & \textbf{45\%}  & \textbf{129\%} \\
+RMSE      & 28064 & 31956 & 22671 & 33183 & \textbf{19853} & \textbf{31033} \\
+R Squared & 0.892 & 0.820 & 0.929 & 0.805 & \textbf{0.946} & \textbf{0.829} \\ \bottomrule
+\end{tabular}%
+}
+\caption{Stacked Regression Model Versus Individual Models: Choosing Final Model. \cite{inferrence}}
+\label{tab:final-ml}
+\end{table}

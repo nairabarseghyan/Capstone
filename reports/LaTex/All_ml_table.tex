@@ -1,0 +1,18 @@
+% \usepackage{booktabs}
+% \usepackage{graphicx}
+\begin{table*}[]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}ccccccccccc@{}}
+\toprule
+                 & \multicolumn{2}{c}{Linear Regression} & \multicolumn{2}{c}{Decision Tree Regressor} & \multicolumn{2}{c}{Gradient Boosting Regressor} & \multicolumn{2}{c}{\textbf{Random Forest Regressor}} & \multicolumn{2}{c}{\textbf{XGBoost Regressor}} \\ \midrule
+\textbf{Metrics} & Train             & Validation        & Train                  & Validation         & Train                & Validation               & Train                     & Validation               & Train                  & Validation            \\ \midrule
+MAE              & 17364             & 16832             & \textbf{1001}          & 8267               & 10,005               & 9963                     & 2660                      & \textbf{6566}            & 6396                   & 6816                  \\
+MAPE             & \textbf{4.6\%}    & \textbf{4.6\%}    & 31.3\%                 & 144\%              & 275\%                & 304\%                    & 45\%                      & 129\%                    & 120\%                  & 145\%                 \\
+RMSE             & 69339             & 58682             & \textbf{7426}          & 41631              & 34686                & 33501                    & 19853                     & \textbf{31033}           & 22671                  & 33183                 \\
+R Squared        & 0.338             & 0.392             & 0.992                  & 0.694              & 0.834                & 0.802                    & \textbf{0.946}            & \textbf{0.829}           & \textbf{0.929}         & \textbf{0.805}        \\ \bottomrule
+\end{tabular}%
+}
+\caption{Performance Metrics Across Various Regression Models. \cite{inferrence}}
+\label{tab:all-ml-table}
+\end{table*}

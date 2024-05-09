@@ -1,0 +1,50 @@
+% Please add the following required packages to your document preamble:
+
+\begin{table}[]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Attribute}            & \textbf{Description}                                                                                  & \textbf{DataType} \\ \hline
+\textbf{sale\_date}           & \begin{tabular}[c]{@{}l@{}}The date on which \\ the sale occurred.\end{tabular}                       & Date              \\ \hline
+\textbf{Revenue\_VAT}         & \begin{tabular}[c]{@{}l@{}}The revenue from the sale \\ including value-added tax.\end{tabular}       & numeric           \\ \hline
+\textbf{Quantity}             & \begin{tabular}[c]{@{}l@{}}The number of units sold \\ in each transaction.\end{tabular}              & numeric           \\ \hline
+\textbf{product\_type}        & \begin{tabular}[c]{@{}l@{}}The type or category of the \\ product sold.\end{tabular}                  & character         \\ \hline
+\textbf{Brand}                & The brand of the product.                                                                             & character         \\ \hline
+\textbf{manufacture\_country} & \begin{tabular}[c]{@{}l@{}}The country where the \\ product was manufactured.\end{tabular}            & character         \\ \hline
+\textbf{Branch}               & \begin{tabular}[c]{@{}l@{}}The store where the sale \\ took place.\end{tabular}                       & character         \\ \hline
+\textbf{City}                 & \begin{tabular}[c]{@{}l@{}}The city in which the \\ branch is located.\end{tabular}                   & character         \\ \hline
+\textbf{Districts}            & \begin{tabular}[c]{@{}l@{}}The district of Yerevan \\ where the branch is located.\end{tabular}       & character         \\ \hline
+\textbf{Regions}              & \begin{tabular}[c]{@{}l@{}}The region of Armenia \\ where the branch location.\end{tabular}           & character         \\ \hline
+\textbf{Product\_category}    & \begin{tabular}[c]{@{}l@{}}The broader category to \\ which the product belongs.\end{tabular}         & character         \\ \hline
+\textbf{IsHoliday} &
+  \begin{tabular}[c]{@{}l@{}}A binary indicator (0 or 1) \\ denoting whether the sale \\ occurred on a holiday.\end{tabular} &
+  integer \\ \hline
+\textbf{month}                & \begin{tabular}[c]{@{}l@{}}The month when the \\ sale occurred.\end{tabular}                          & numeric           \\ \hline
+\textbf{year}                 & \begin{tabular}[c]{@{}l@{}}The year when the \\ sale occurred.\end{tabular}                           & numeric           \\ \hline
+\textbf{day}                  & \begin{tabular}[c]{@{}l@{}}The day of the month on \\ which the sale took place.\end{tabular}         & integer           \\ \hline
+\textbf{day\_of\_week} &
+  \begin{tabular}[c]{@{}l@{}}The day of the week \\ represented numerically \\ (e.g.,1 for Monday, \\ 2 for Tuesday, etc.).\end{tabular} &
+  numeric \\ \hline
+\textbf{day\_name} &
+  \begin{tabular}[c]{@{}l@{}}The name of the day on \\ which the sale took place \\ (e.g., Monday, Tuesday).\end{tabular} &
+  character \\ \hline
+\textbf{quarter}              & \begin{tabular}[c]{@{}l@{}}The quarter of the year\\  during which the sale \\ occurred.\end{tabular} & integer           \\ \hline
+\textbf{is\_weekend} &
+  \begin{tabular}[c]{@{}l@{}}A numeric indicator (0 or 1) \\ denoting whether the sale \\ occurred on a weekend.\end{tabular} &
+  numeric \\ \hline
+\textbf{week\_of\_year} &
+  \begin{tabular}[c]{@{}l@{}}The specific week of \\ the year during which \\ the sale took place.\end{tabular} &
+  numeric \\ \hline
+\textbf{sales\_proxy\_week} &
+  \begin{tabular}[c]{@{}l@{}}The average weekly sales \\ revenue, adjusted for each \\ branch and week.\end{tabular} &
+  numeric \\ \hline
+\textbf{sales\_proxy\_month} &
+  \begin{tabular}[c]{@{}l@{}}The average monthly sales \\ revenue, adjusted for each \\ branch and month.\end{tabular} &
+  numeric \\ \hline
+\end{tabular}%
+}
+%\captionsetup[table]{skip=100pt}
+\caption{ Attributes and Descriptions of Sales Data for 'NOR TUN' Chain Stores}
+\label{tab:attribute_table}
+\end{table}

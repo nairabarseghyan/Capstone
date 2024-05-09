@@ -1,0 +1,17 @@
+% \usepackage{graphicx}
+\begin{table}[]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lllll}
+\hline
+                 & \multicolumn{2}{l}{One Layer LSTM}  & \multicolumn{2}{l}{Stacked LSTM} \\ \hline
+\textbf{Metrics} & Train            & Validation       & Train         & Validation       \\ \hline
+MAE              & \textbf{6.03}    & \textbf{9.248}   & 9.532         & 11.064           \\
+MAPE             & \textbf{66.43\%} & \textbf{46.25\%} & 89.08\%       & 50.16\%          \\
+RMSE             & \textbf{8.143}   & \textbf{12.648}  & 12.829        & 15.250           \\
+R Squared        & \textbf{0.801}   & \textbf{0.609}   & 0.506         & 0.432            \\ \hline
+\end{tabular}%
+}
+\caption{ Performance Metrics for One Layer and Stacked LSTM Models. The MAE and RMSE values are presented in millions, e.g., an MAE of 6.03 represents 6,030,000.\cite{inferrence}}
+\label{tab:lstm-table}
+\end{table}

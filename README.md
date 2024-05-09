@@ -1,3 +1,4 @@
+
 # Capstone Project: Analysis and Time Series Forecasting of Sales for "NOR TUN" Chain Stores
 
 ## Author
@@ -91,7 +92,33 @@ For the lag-llam model open Jupyter notebook fine_tune_lag_llama.ipynb and run t
 **Note**  
 The stacked model file is too heavy to upload to github, you need to download the file from the shared folder. \
 Folder is shared only with the authorized users. 
-    
+
+### Setting up a R Environment
+To run this project, you will need R programming language, Rstudio and dependent packages. Follow these steps to set up your environment:
+
+1. **Install R**  
+   Ensure that R is installed on your system. You can download it from [cran.r-project.org](https://cran.r-project.org/bin/windows/base/).
+   
+2. **Install Rstudio**  
+   Ensure that R is installed on your system. You can download it from [cran.r-project.org]([https://cran.r-project.org/bin/windows/base/](https://posit.co/download/rstudio-desktop/)).
+   
+3. **Open Visualizations.Rmd file in Rstudio**  
+  
+4. **Download Packrat to initialize environemnt**
+   
+   In R console 
+  ```bash
+  install.packages("packrat")
+  ```
+  
+4. **Initialize Environment and Install Required Packages**
+   In R console 
+    ```bash
+    packrat::restore()
+    ```
+5. **Run all chunks consecutively**
+
+
 ## Project Structure
 ```
 Capstone/
@@ -108,7 +135,7 @@ Capstone/
    │   │   ├── data_preprocessing.ipynb # Notebook for data preprocessing
    │   │   └── translation_library.py   # Script for data translation features
    │   └── rmd/
-   │       ├── graph_tests.Rmd          # R Markdown for visual testing
+   │       ├── Visualizations.Rmd          # R Markdown for visual testing
    │       └── preprocessing.R          # R script for data preprocessing
    ├── src/                             # Source code for this project
    │   ├── config.py                    # Configuration settings and constants
@@ -123,6 +150,16 @@ Capstone/
    │   ├── lag_llama_inference.ipynb    # Notebook for Lag-Llama model inference
    │   └── fine_tune_lag_llama.ipynb    # Notebook for fine-tuning Lag-Llama model
    ├── reports/                         # Generated analysis reports and summaries
+   │   ├── LaTex/
+   │   │   ├── references.bib
+   │   │   ├── LSTM_table.tex
+   │   │   ├── Lag_llama_table.tex
+   │   │   ├── Attributes_table.tex
+   │   │   ├── Anova_table.tex
+   │   │   ├── All_ml_table.tex
+   │   │   ├── Stacking_ml_table.tex
+   │   │   └── main.tex               # Main Latex file                  
+   │   └── Capstone.pdf                     # Final Capstone report
    ├── README.md
    └── requirements.txt                 # Python dependencies for the project
 
