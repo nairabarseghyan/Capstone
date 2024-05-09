@@ -167,13 +167,8 @@ data/results/Predictions/*
 
 ### exclude heavy models
 
-models/RFR_model.sav
-models/testing_models/*
+models/ensemble_model.sav
 
 # ignore macos files
 *.DS_Store
 
-# ignore R saving 
-
-*.RData
-*.Rhistory
