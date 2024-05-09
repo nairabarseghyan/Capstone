@@ -173,3 +173,7 @@ models/testing_models/*
 # ignore macos files
 *.DS_Store
 
+# ignore R saves
+
+*.RData
+*.Rhistory
