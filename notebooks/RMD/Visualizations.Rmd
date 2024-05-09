@@ -107,8 +107,7 @@ for (col in factors) {
 ```
 
 ```{r}
-library(dplyr)
-
+options("digits" = 3)
 
 anova_results <- list()
 
@@ -163,7 +162,7 @@ print(anova_dataframe)
 ```
 
 ```{r}
-write.csv(anova_dataframe, paste0(DATA_PATH, "results/anova_results.csv"), row.names = FALSE)
+write.csv(format(anova_dataframe, digits=2), paste0(DATA_PATH, "results/Models/anova_results.csv"), row.names = FALSE)
 ```
 
 ```{r}
@@ -845,6 +844,6 @@ dev.off()
 ```
 
 
-
+# PREDICTIONS
 
 

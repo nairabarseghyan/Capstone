@@ -33,6 +33,7 @@ def retrieve_predictions(split_df, model):
     y_pred = model.predict(X)
     y_pred = pd.DataFrame({
     'Pred': y_pred,
+    'True_value' : df_copy['Revenue'].values,
     'Date': ref['Date'].values,  # Use .values to ignore index alignment issues
     'Branch': ref['Branch'].values
 })

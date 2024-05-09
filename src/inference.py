@@ -9,22 +9,22 @@ import torch
 
 # Import custom functionalities 
 from config import MODEL_PATH, DATA_PATH, find_device
-from data_prep import load_and_preprocess_data, split_data, general_revenue_dataframe, split_univariate_data, arrays_to_tensors, get_lag_llama_dataset
+from data_prep import load_and_preprocess_data, split_data, general_revenue_dataframe, split_univariate_data, arrays_to_tensors, get_x_y
 from features import add_calendar_features, add_sales_proxies,  full_data_target_encoder
-from predictions import retrieve_predictions, lstm_model_predictions, get_lag_llama_predictions, transfrom_lag_llama_predictions
+from predictions import retrieve_predictions, lstm_model_predictions
 from models import sliding_windows, LSTM, LSTM2
 from evaluate import evaluate_model
 
 start_time = time.time()
 
 # =====================================================================================================================================
-#                                                   Ensemble Models
+#                                                   ML MODELS: Final Model
 # =====================================================================================================================================
 
-# Loading the trained ensemble model
+# Loading the trained Random Forest Regressor model
 
-filename = 'ensemble_model.sav'
-model_path = os.path.join(MODEL_PATH, filename) 
+filename_final = 'RFR_model.sav'
+model_path = os.path.join(MODEL_PATH, filename_final) 
 with open(model_path, 'rb') as file:
     loaded_model = pickle.load(file)
 
@@ -45,24 +45,108 @@ features_data_calendar = add_calendar_features(initial_data)
 features_data_proxies = add_sales_proxies(features_data_calendar)
 train_data, val_data, test_data = split_data(features_data_proxies)
 
+
 # Encoding data for model input
 train_data_encoded, val_data_encoded, test_data_encoded = full_data_target_encoder(train_data, val_data, test_data, encoder)
 
-
-
-# Making predictions with the trained model
+# Making predictions with the final trained model
 train_predictions = retrieve_predictions(train_data, loaded_model)
 val_predictions = retrieve_predictions(val_data, loaded_model)
 test_predictions = retrieve_predictions(test_data, loaded_model)
 
+# Making Evaluations of saved model 
+evaluate_model(train_predictions['True_value'], train_predictions['Pred'], val_predictions['True_value'], val_predictions['Pred'], "RandomForestRegressor")
 
 # Saving model predictions to CSV files
 train_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_train_predictions.csv")
 val_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_val_predictions.csv")
 test_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_test_predictions.csv")
 
+# =====================================================================================================================================
+#                                                   ML MODELS: Intermediary Models
+# =====================================================================================================================================
 
 
+################################### Ensemble Model ###################################
+
+# Loading the trained Ensemble model
+
+filename_ensemble = 'testing_models/Stack_model.sav'
+model_path_ens = os.path.join(MODEL_PATH, filename_ensemble) 
+with open(model_path_ens, 'rb') as file:
+    loaded_model_ens = pickle.load(file)
+    
+# Making predictions with the final trained model
+train_predictions_ens = retrieve_predictions(train_data, loaded_model_ens)
+val_predictions_ens = retrieve_predictions(val_data, loaded_model_ens)
+
+# Making Evaluations of saved model 
+evaluate_model(train_predictions_ens['True_value'], train_predictions_ens['Pred'], val_predictions_ens['True_value'], val_predictions_ens['Pred'], "Stack")
+
+
+################################### Linear Regression ###################################
+
+# Loading the trained Linear Regression model
+filename_LR = 'testing_models/LR_model.sav'
+model_path_LR = os.path.join(MODEL_PATH, filename_LR) 
+with open(model_path_LR, 'rb') as file:
+    loaded_model_LR = pickle.load(file)
+
+# Making predictions with the final trained model
+train_predictions_LR = retrieve_predictions(train_data, loaded_model_LR)
+val_predictions_LR = retrieve_predictions(val_data, loaded_model_LR)
+
+
+# Making Evaluations of saved model 
+evaluate_model(train_predictions_LR['True_value'], train_predictions_LR['Pred'], val_predictions_LR['True_value'], val_predictions_LR['Pred'], "LinearRegression")
+
+################################### Decision Tree Regressor ###################################
+
+# Loading the trained Decision Tree model
+filename_DTR = 'testing_models/DTR_model.sav'
+model_path_DT = os.path.join(MODEL_PATH, filename_DTR) 
+with open(model_path_DT, 'rb') as file:
+    loaded_model_DT = pickle.load(file)
+
+# Making predictions with the final trained model
+train_predictions_DT = retrieve_predictions(train_data, loaded_model_DT)
+val_predictions_DT = retrieve_predictions(val_data, loaded_model_DT)
+
+
+# Making Evaluations of saved model 
+evaluate_model(train_predictions_DT['True_value'], train_predictions_DT['Pred'], val_predictions_DT['True_value'], val_predictions_DT['Pred'], "DecisionTree")
+
+################################### Gradient Boosting Regressor ###################################
+
+# Loading the trained Gradient Boosting model
+filename_GBR = 'testing_models/GBR_model.sav'
+model_path_GBR = os.path.join(MODEL_PATH, filename_GBR) 
+with open(model_path_GBR, 'rb') as file:
+    loaded_model_GBR = pickle.load(file)
+
+# Making predictions with the final trained model
+train_predictions_GBR = retrieve_predictions(train_data, loaded_model_GBR)
+val_predictions_GBR = retrieve_predictions(val_data, loaded_model_GBR)
+
+
+# Making Evaluations of saved model 
+evaluate_model(train_predictions_GBR['True_value'], train_predictions_GBR['Pred'], val_predictions_GBR['True_value'], val_predictions_GBR['Pred'], "GradientBoosting")
+
+################################### XGBoost ###################################
+
+# Loading the trainedXGBoost model
+filename_XGB = 'testing_models/XGB_model.sav'
+model_path_XGB = os.path.join(MODEL_PATH, filename_XGB) 
+with open(model_path_XGB, 'rb') as file:
+    loaded_model_XGB = pickle.load(file)
+
+# Making predictions with the final trained model
+train_predictions_XGB = retrieve_predictions(train_data, loaded_model_XGB)
+val_predictions_XGB = retrieve_predictions(val_data, loaded_model_XGB)
+
+
+# Making Evaluations of saved model 
+evaluate_model(train_predictions_XGB['True_value'], train_predictions_XGB['Pred'], val_predictions_XGB['True_value'], val_predictions_XGB['Pred'], "XGBoost")
 
 # =====================================================================================================================================
 #                                                       LSTM MODELS

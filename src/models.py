@@ -64,6 +64,8 @@ def ML_model_test(X_train, y_train, X_val, y_val):
         print(f"The computational time is {end - start} seconds")
         print("\n")
         
+    return models
+        
         
 # Benchmarking
 def ML_model_ensemble(X_train, y_train, X_val, y_val):

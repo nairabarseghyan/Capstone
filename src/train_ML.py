@@ -51,17 +51,52 @@ test_models = ML_model_test(train_X, train_y, validate_X, validate_y)
 ensemble_models = ML_model_ensemble(train_X, train_y, validate_X, validate_y)
 
 # Select the final model from the ensemble
-final_model = ensemble_models[2]
+final_model = ensemble_models[0]
 
 
-# Saving Final Model 
-filename = 'ensemble_model.sav'
+# Saving Final Model:  Random Forest Regressor
+filename_final = 'RFR_model.sav'
 
-model_path = os.path.join(MODEL_PATH, filename)  # Ensures the path concatenation is correct
+model_path = os.path.join(MODEL_PATH, filename_final)  # Ensures the path concatenation is correct
 with open(model_path, 'wb') as file:
     pickle.dump(final_model, file)
 
 
+# Saving Intermediary Models: Ensemble 
+filename_ensemble = 'testing_models/Stack_model.sav'
+
+model_path_ens = os.path.join(MODEL_PATH, filename_ensemble)  # Ensures the path concatenation is correct
+with open(model_path_ens, 'wb') as file:
+    pickle.dump(ensemble_models[2], file)
+    
+# Saving Intermediary Models: Linear Regression
+filename_LR = 'testing_models/LR_model.sav'
+
+model_path_LR = os.path.join(MODEL_PATH, filename_LR)  # Ensures the path concatenation is correct
+with open(model_path_LR, 'wb') as file:
+    pickle.dump(test_models['MLR'], file)
+
+# Saving Intermediary Models: Decision Tree
+filename_DTR = 'testing_models/DTR_model.sav'
+
+model_path_DTR = os.path.join(MODEL_PATH, filename_DTR)  # Ensures the path concatenation is correct
+with open(model_path_DTR, 'wb') as file:
+    pickle.dump(test_models['DT'], file)
+    
+# Saving Intermediary Models: Gradient Boosting
+filename_GBR = 'testing_models/GBR_model.sav'
+
+model_path_GBR = os.path.join(MODEL_PATH, filename_GBR)  # Ensures the path concatenation is correct
+with open(model_path_GBR, 'wb') as file:
+    pickle.dump(test_models['GB'], file)
+    
+
+# Saving Intermediary Models: XGBoost
+filename_XGB = 'testing_models/XGB_model.sav'
+
+model_path_XGB = os.path.join(MODEL_PATH, filename_XGB)  # Ensures the path concatenation is correct
+with open(model_path_XGB, 'wb') as file:
+    pickle.dump(test_models['XGB'], file)
 
 # Saving the encoder used for categorical variable encoding
 encoder_name = 'ml_target_encoder.pkl'
