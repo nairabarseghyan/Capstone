@@ -58,9 +58,9 @@ test_predictions = retrieve_predictions(test_data, loaded_model)
 evaluate_model(train_predictions['True_value'], train_predictions['Pred'], val_predictions['True_value'], val_predictions['Pred'], "RandomForestRegressor")
 
 # Saving model predictions to CSV files
-train_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_train_predictions.csv")
-val_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_val_predictions.csv")
-test_predictions.to_csv(f"{DATA_PATH}results/Predictions/SR_test_predictions.csv")
+train_predictions.to_csv(f"{DATA_PATH}results/Predictions/RFR_train_predictions.csv")
+val_predictions.to_csv(f"{DATA_PATH}results/Predictions/RFR_val_predictions.csv")
+test_predictions.to_csv(f"{DATA_PATH}results/Predictions/RFR_test_predictions.csv")
 
 # =====================================================================================================================================
 #                                                   ML MODELS: Intermediary Models

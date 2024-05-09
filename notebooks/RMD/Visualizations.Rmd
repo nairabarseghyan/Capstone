@@ -32,16 +32,9 @@ library(patchwork)
 library(ggcorrplot)
 ```
 
-```{r, echo=FALSE}
-# packs <- c("`ae.sty'","`grfext.sty'", "`bookmark.sty'") 
-# 
-# for (i in 1:length(packs)) {     
-#     tinytex::parse_install(text = paste('! LaTeX Error: File', packs[i],'not found.'))
-# }
 
-```
 
-```{r}
+```{r palettes, include=FALSE}
 start_color <- "#0554a4"  # Dark Olive Green
 end_color <- "#c90c0f"   # Gold
 
@@ -54,46 +47,49 @@ default_palette <- custom_color_palette(10)
 #color_points <- c("#0554a4", "#999999","#061735","#c90c0f") 
 ```
 
-```{r}
+```{r Project-Paths, include=FALSE}
 PROJECT_PATH <- "/Users/nairabarseghyan/Desktop/project_name/"
-FIGURES_PATH <- "/Users/nairabarseghyan/Desktop/project_name/reports/figures/"
+FIGURES_PATH <- "/Users/nairabarseghyan/Desktop/project_name/reports/LaTex/figures/"
 DATA_PATH <- "/Users/nairabarseghyan/Desktop/project_name/data/"
 ```
 
 # Importing preprocessing functions
-```{r}
+```{r Preprocessing-Script, include=FALSE}
 source("./preprocessing.R")
 ```
 
 # Importing Logo for the graphs
-```{r}
+```{r Logo, include=FALSE}
 logo <- image_read(paste0(PROJECT_PATH, "data/external/nt_logo.png"))
 ```
 
 # Reading and creating necessary datasets 
 
-```{r}
+```{r Read-Data, include=FALSE}
 sales_raw <- read.csv(paste0(DATA_PATH, "processed/sales_whole.csv"))
 ```
 # Preprocessing sales data
 
-```{r}
+```{r Preprocess-Data , include=FALSE}
 sales_data_preprocessed <- process_sales_data(sales_raw)
 ```
 
 # adding feutures to the data
-```{r}
+```{r Add-Calendar-Data, include=FALSE}
 calendar_sales_data <- add_calendar_features(sales_data_preprocessed)
 ```
 
-```{r}
+```{r Get-Final-Data, include=FALSE}
 final_sales_data <- add_sales_proxies(calendar_sales_data)
 ```
 
+```{r General-Revenue-Dataframe}
+aggregated_revnue_dataframe<-general_revenue_dataframe(final_sales_data)
+```
 
 # Feuture engenereeing 
 
-```{r}
+```{r Factor-Categorcal-Data, include=FALSE}
 anova_data <- final_sales_data
 
 # List of column names to convert to factors
@@ -106,7 +102,7 @@ for (col in factors) {
 }
 ```
 
-```{r}
+```{r Anova-Test, include=FALSE}
 options("digits" = 3)
 
 anova_results <- list()
@@ -134,7 +130,7 @@ for (factor in factors) {
 }
 ```
 
-```{r}
+```{r Anova-Dataframe, include=FALSE}
 anova_dataframe <- do.call(rbind, anova_results)
 rownames(anova_dataframe) <- NULL  # Clean up row names
 
@@ -161,33 +157,18 @@ anova_dataframe <- anova_dataframe %>%
 print(anova_dataframe)
 ```
 
-```{r}
+```{r Save-Anova, include=FALSE}
 write.csv(format(anova_dataframe, digits=2), paste0(DATA_PATH, "results/Models/anova_results.csv"), row.names = FALSE)
 ```
 
-```{r}
+```{r Print-Anova, echo=FALSE, message=FALSE}
 knitr::kable(anova_dataframe, format = "markdown")
 ```
 
-# Data description
-```{r}
-column_info <- data.frame(
-  Attribute = names(final_sales_data),
-  DataType = sapply(final_sales_data, class),
-  stringsAsFactors = FALSE  # Avoid converting strings to factors
-)
 
-column_info
-write.csv(column_info, paste0(DATA_PATH, "results/attributes_info.csv"), row.names = FALSE)
-```
-
-
-```{r}
-knitr::kable(column_info, format = "markdown")
-```
 
 # Helper functions
-```{r}
+```{r Transform-Labels-To-Millions, include=FALSE}
 label_millions <- function(x) {
   ifelse(x >= 1e9, paste0(format(round(x / 1e9, 1), nsmall = 1), "B"),
            ifelse(x >= 1e6, paste0(format(round(x / 1e6, 1), nsmall = 1), "M"),
@@ -195,7 +176,7 @@ label_millions <- function(x) {
 }
 ```
 
-```{r}
+```{r File-Saving-Helper, include=FALSE}
 # Function to get current device size
 get_device_size <- function() {
   # Check if a device is open and return its size
@@ -208,19 +189,16 @@ get_device_size <- function() {
 ```
 # EDA
 
-```{r}
+```{r Correlation-Data, include=FALSE}
 data_for_correlation <- final_sales_data %>%
   select(Revenue_VAT, Quantity, sales_proxy_week, sales_proxy_month) %>%
   na.omit()  # Removing NA values to ensure correlation calculation
 cor_matrix <- cor(data_for_correlation)
 ```
-```{r}
-label_format <- function(x) {
-  sprintf("%.2f", x)
-}
-```
 
-```{r}
+
+
+```{r Correlation-Plot ,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "correlation_matrix_with_style.pdf"), width = current_size[1], height = current_size[2])
 plot_corr <- ggcorrplot(cor_matrix, 
@@ -242,10 +220,11 @@ plot_corr <- plot_corr +
 # Print the plot for a check
 print(plot_corr)
 dev.off()
+print(plot_corr)
 ```
 
 
-```{r}
+```{r Time-Series-Graphing, include=FALSE}
 create_sales_time_series <- function(df, target_year, annotations, custom_subtitle = NULL) {
   # Filter the data for the specified year using the existing 'year' column
   sales_data <- df %>%
@@ -291,7 +270,7 @@ create_sales_time_series <- function(df, target_year, annotations, custom_subtit
 ```
 
 
-```{r, out.height='80%'}
+```{r Time-Series-2021,echo = FALSE, out.height='80%', message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "time_series_2021_sales.pdf"), width = current_size[1], height = current_size[2])
 annotations =list(list(date = "2021-11-27", value = 106606320, label = "106.61M"))
@@ -300,12 +279,14 @@ sales_ts_2021 <- create_sales_time_series(df = final_sales_data,
                          annotations = annotations)
 grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(sales_ts_2021)
+grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
 
 
-```{r, out.height='80%'}
+```{r Time-Series-2022,echo = FALSE , out.height='80%', message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "time_series_2022_sales.pdf"), width = current_size[1], height = current_size[2])
 sales_ts_2022 <-create_sales_time_series(
@@ -315,9 +296,11 @@ sales_ts_2022 <-create_sales_time_series(
 )
 grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(sales_ts_2022)
+grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
-```{r, out.height='80%'}
+```{r Time-Series-2023,echo = FALSE, out.height='80%', message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "time_series_2023_sales.pdf"), width = current_size[1], height = current_size[2])
 sales_ts_2023 <-create_sales_time_series(
@@ -328,11 +311,13 @@ sales_ts_2023 <-create_sales_time_series(
 )
 grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(sales_ts_2023)
+grid::grid.raster(logo, x = 0.07, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
 
-```{r}
+```{r Sale-By-Branch-Barplot-Graphing, include=FALSE}
 plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL) {
   
   data <- df%>%filter(
@@ -367,64 +352,66 @@ plot_sales_by_branch<- function(df, target_year = NULL, target_city= NULL) {
 
 
 # Overall sales by shop
-```{r}
+```{r Sales-By-Shop-2021,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_shop_2021_sales.pdf"), width = current_size[1], height = current_size[2])
-plot_sales_by_branch(
+sales_by_shop_2021_sales<-plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2021
 )
+print(sales_by_shop_2021_sales)
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(sales_by_shop_2021_sales)
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
-```{r}
+```{r Sales-By-Shop-2022,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_shop_2022_sales.pdf"), width = current_size[1], height = current_size[2])
-plot_sales_by_branch(
+sales_by_shop_2022_sales<-plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2022
 )
+print(sales_by_shop_2022_sales)
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(sales_by_shop_2022_sales)
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
-```{r}
+```{r Sales-By-Shop-2023,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_shop_2023_sales.pdf"), width = current_size[1], height = current_size[2])
-plot_sales_by_branch(
+sales_by_shop_2023_sales<-plot_sales_by_branch(
   df = final_sales_data, 
   target_year = 2023
 )
+print(sales_by_shop_2023_sales)
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(sales_by_shop_2023_sales)
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
 
-# SAles by shop in Yerevan
+# Sales by shop in Yerevan
 
 
-```{r}
+```{r Sales-By-Shop-Yerevan,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_shop_yerevan_sales.pdf"), width = current_size[1], height = current_size[2])
-plot_sales_by_branch(
+sales_by_shop_yerevan_sales<-plot_sales_by_branch(
   df = final_sales_data, 
   target_city = "Yerevan"
 )
+print(sales_by_shop_yerevan_sales)
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
-```
-
-```{r}
-current_size <- get_device_size()
-pdf(paste0(FIGURES_PATH, "sales_by_shop_whole_sales.pdf"), width = current_size[1], height = current_size[2])
-plot_sales_by_branch(
-  df = final_sales_data
-)
+print(sales_by_shop_yerevan_sales)
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
-dev.off()
 ```
 
 
@@ -432,7 +419,7 @@ Heatmap of salse years and months
 
 
 
-```{r}
+```{r Heatmap-Sales-Year-Month,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "heatmap_sales.pdf"), width = current_size[1], height = current_size[2])
 heatmap_df <- final_sales_data
@@ -467,11 +454,13 @@ print(p)
 
 grid::grid.raster(logo, x = 0.8, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(p)
+grid::grid.raster(logo, x = 0.8, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 Area Chart
 
-```{r}
+```{r, Area-Chart-Data, echo=FALSE, message=FALSE}
 
 df_surfacegraph <- final_sales_data
 df_surfacegraph <- df_surfacegraph %>%
@@ -488,7 +477,7 @@ df_surfacegraph <- df_surfacegraph %>%
 ```
 
 
-```{r}
+```{r Area-Chart-Graph ,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "area_graph_sales_by_year.pdf"), width = current_size[1], height = current_size[2])
 p <- ggplot(df_surfacegraph, aes(x = month, y = Total_Revenue , fill = year, group = year)) +
@@ -496,7 +485,7 @@ p <- ggplot(df_surfacegraph, aes(x = month, y = Total_Revenue , fill = year, gro
   scale_x_discrete() +
   scale_y_continuous(labels = label_millions)+
   scale_fill_manual(values = custom_color_palette(3)) +
-  labs(title = "Total Sales by Month and Year", x = "Month", y = "Total Revenue", fill = "Year") +
+  labs(title = "Total Sales by Month and Year", x = "", y = "Total Revenue", fill = "Year") +
   theme_minimal() +
   theme(  axis.text.y = element_text(color = "black"), 
         plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
@@ -505,10 +494,12 @@ print(p)
 
 grid::grid.raster(logo, x = 0.87, y = 0.08, just = c('left', 'bottom'), width = unit(0.9, 'inches'))
 dev.off()
+print(p)
+grid::grid.raster(logo, x = 0.87, y = 0.08, just = c('left', 'bottom'), width = unit(0.9, 'inches'))
 ```
 # Revenue by city Without Yerevan
 
-```{r}
+```{r Revenue-By-City_data, include=FALSE}
 city_revenue <- final_sales_data
 
 city_revenue$City_Group <- with(city_revenue, ifelse(City == "Yerevan", "Yerevan", "Other Cities"))
@@ -523,21 +514,24 @@ city_revenue <- city_revenue %>%
 
 
 
-```{r}
+```{r Revenue-City-Without-Yerevan,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_city.pdf"), width = current_size[1], height = current_size[2])
-city_revenue  %>%
-  filter(City != "Yerevan") %>%
-  ggplot(aes(x = reorder(City,-Total_Revenue), y = Total_Revenue)) +
-  geom_bar(stat = "identity", fill = "#0554a4") +  # Use 'identity' to indicate bar heights are given in the data
-  theme_minimal() +
-  scale_y_continuous(labels = label_millions)+
-  scale_fill_manual(values = default_palette) +
-  labs(title = 'Total Revenue by City (Excluding Yerevan)', x = 'City', y = 'Total Revenue') +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+revenue_wiothot_yerevan<-city_revenue  %>%
+    filter(City != "Yerevan") %>%
+    ggplot(aes(x = reorder(City,-Total_Revenue), y = Total_Revenue)) +
+    geom_bar(stat = "identity", fill = "#0554a4") +  # Use 'identity' to indicate bar heights are given in the data
+    theme_minimal() +
+    scale_y_continuous(labels = label_millions)+
+    scale_fill_manual(values = default_palette) +
+    labs(title = 'Total Revenue by City (Excluding Yerevan)', x = 'City', y = 'Total Revenue') +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+print(revenue_wiothot_yerevan)
 grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+print(revenue_wiothot_yerevan)
+grid::grid.raster(logo, x = 0.03, y = -0.04, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 #comparing yerevan with other cities
 ## treemap 
@@ -546,10 +540,10 @@ dev.off()
 
 
 
-```{r}
+```{r Treemap-whole-save,include= FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH,"treemap_whole.pdf"), width = current_size[1], height = current_size[2])
-  treemap(city_revenue,
+treemap(city_revenue,
   index = "City",          # The column that identifies each rectangle
   vSize = "Total_Revenue", # The column that determines the area size of each rectangle
   vColor = "Total_Revenue",# The column that determines the color scale
@@ -557,33 +551,63 @@ pdf(paste0(FIGURES_PATH,"treemap_whole.pdf"), width = current_size[1], height = 
   fontsize.title = 14,
   palette = custom_color_palette(11)   # Choose a color palette
 )
+
 grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+```
+
+```{r Treemap-whole-print,echo = FALSE, message=FALSE}
+treemap(city_revenue,
+  index = "City",          # The column that identifies each rectangle
+  vSize = "Total_Revenue", # The column that determines the area size of each rectangle
+  vColor = "Total_Revenue",# The column that determines the color scale
+  title = "Revenue by City",
+  fontsize.title = 14,
+  palette = custom_color_palette(11)   # Choose a color palette
+)
+
+grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
 
-
-```{r}
+```{r Treemap-Without-Yerevan-save, include = FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH,"treemap_without_yerevan.pdf"), width = current_size[1], height = current_size[2])
 city_revenue %>% 
   filter(City != "Yerevan") %>%
-  treemap(
-  index = "City",          # The column that identifies each rectangle
-  vSize = "Total_Revenue", # The column that determines the area size of each rectangle
-  vColor = "Total_Revenue",# The column that determines the color scale
-  title = "Revenue by City Without Yerevan",
-  fontsize.title = 14,
-  palette = custom_color_palette(11)   # Choose a color palette
-)
+        treemap(
+        index = "City",          # The column that identifies each rectangle
+        vSize = "Total_Revenue", # The column that determines the area size of each rectangle
+        vColor = "Total_Revenue",# The column that determines the color scale
+        title = "Revenue by City Without Yerevan",
+        fontsize.title = 14,
+        palette = custom_color_palette(11)   # Choose a color palette
+      )
+
 grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+```
+
+```{r Treemap-Without-Yerevan-print, echo = FALSE, message=FALSE}
+city_revenue %>% 
+  filter(City != "Yerevan") %>%
+        treemap(
+        index = "City",          # The column that identifies each rectangle
+        vSize = "Total_Revenue", # The column that determines the area size of each rectangle
+        vColor = "Total_Revenue",# The column that determines the color scale
+        title = "Revenue by City Without Yerevan",
+        fontsize.title = 14,
+        palette = custom_color_palette(11)   # Choose a color palette
+      )
+
+grid::grid.raster(logo, x = 0.035, y = -0.02, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
-
-```{r}
+```{r Weekday-Data, include=FALSE}
 weekdays_order <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
 data_summary <- final_sales_data %>%
@@ -598,7 +622,7 @@ data_summary <- data_summary %>%
 ```
 
 
-```{r}
+```{r Sales-Weekday,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_weekday.pdf"), width = current_size[1], height = current_size[2])
 p <- ggplot(data_summary, aes(x = day_name, y = Total_Revenue, fill = City)) +
@@ -606,20 +630,22 @@ p <- ggplot(data_summary, aes(x = day_name, y = Total_Revenue, fill = City)) +
   facet_wrap(~year, scales = "free_x") +
   scale_y_continuous(labels = label_millions) +
   scale_fill_manual(values = c("Yerevan" = "#0554a4", "Other Cities" = "#c90c0f")) +
-  labs(title = "Average Sales by Weekday Across Cities", x = "Weekday", y = "Revenue in Millions") +
+  labs(title = "Average Sales by Weekday Across Cities", x = "", y = "Revenue in Millions") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
 
 # Print the plot
 print(p)
-
 grid::grid.raster(logo, x = 0.85, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+print(p)
+grid::grid.raster(logo, x = 0.85, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
-```{r}
+```{r Category-Sales-Number-Data, include=FALSE}
 number_of_sales_by_category <- final_sales_data %>%
   group_by(Product_category) %>%
   summarise(Total_Sold = sum(Quantity, na.rm = TRUE)) %>%
@@ -630,7 +656,7 @@ number_of_sales_by_category <- final_sales_data %>%
 ```
 
 
-```{r}
+```{r Category-Sales-Number-Graph,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_qunatity_by_category.pdf"), width = current_size[1], height = current_size[2])
 sales_qunatity_by_category <- ggplot(number_of_sales_by_category, aes(x = Product_category, y = Total_Sold)) +
@@ -648,10 +674,13 @@ sales_qunatity_by_category <- ggplot(number_of_sales_by_category, aes(x = Produc
 print(sales_qunatity_by_category)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+print(sales_qunatity_by_category)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
-```{r}
+```{r Category-Revenue-Data, include=FALSE}
   revenue_sales_by_category <- final_sales_data %>%
   group_by(Product_category) %>%
   summarise(Total_Rev = sum(Revenue_VAT, na.rm = TRUE)) %>%
@@ -662,7 +691,7 @@ dev.off()
 ```
 
 
-```{r}
+```{r Category-Revenue-Graph,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "revenue_by_category.pdf"), width = current_size[1], height = current_size[2])
 revenue_by_category <- ggplot(revenue_sales_by_category, aes(x = Product_category, y = Total_Rev)) +
@@ -678,18 +707,24 @@ revenue_by_category <- ggplot(revenue_sales_by_category, aes(x = Product_categor
 print(revenue_by_category)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+print(revenue_by_category)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
-```{r}
+```{r Category-Revenue-Quantitiy-Graph,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "revenue_quantity_comparison_by_category.pdf"), width = current_size[1], height = current_size[2])
 ggarrange(sales_qunatity_by_category, revenue_by_category, nrow = 2)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+ggarrange(sales_qunatity_by_category, revenue_by_category, nrow = 2)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
-```{r}
+```{r, Top-Brand-Data, include=FALSE}
 top_brands <- final_sales_data %>%
   filter(Brand != "" & !is.na(Brand)) %>%
   group_by(Brand) %>%
@@ -701,7 +736,7 @@ top_brands <- final_sales_data %>%
 ```
 
 
-```{r}
+```{r Top-10-Brands,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "top_10_brands.pdf"), width = current_size[1], height = current_size[2])
 top_10_brands <- ggplot(top_brands, aes(x = Brand, y = Total_Revenue)) +
@@ -715,13 +750,16 @@ top_10_brands <- ggplot(top_brands, aes(x = Brand, y = Total_Revenue)) +
         plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
         legend.title = element_blank())  # Remove the legend title
 
-t
+
 print(top_10_brands)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+print(top_10_brands)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
-```{r}
+```{r Top-Heating-Tiles-Data, include=FALSE}
 # Filter and prepare data for "Heating"
 Heating_data <- final_sales_data %>%
   filter(Product_category == "Heating") %>%
@@ -743,7 +781,7 @@ Tiles_data <- final_sales_data %>%
   mutate(Brand = factor(Brand, levels = unique(Brand)))
 ```
 
-```{r}
+```{r Top-Heating-Graph, echo=FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "top_5_brands_heating.pdf"), width = current_size[1], height = current_size[2])
 top5_Heating <-ggplot(Heating_data, aes(x = Brand, y = Total_rev)) +
@@ -759,9 +797,12 @@ top5_Heating <-ggplot(Heating_data, aes(x = Brand, y = Total_rev)) +
 print(top5_Heating)
 grid::grid.raster(logo, x = 0.0001, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ggsave(paste0(FIGURES_PATH,"top_5_brands_heating.pdf"))
+
+print(top5_Heating)
+grid::grid.raster(logo, x = 0.0001, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
-```{r}
+```{r Top-Tiles-Graph,echo = FALSE, message=FALSE}
 top5_Tiles <- ggplot(Tiles_data, aes(x = Brand, y = Total_rev)) +
   geom_bar(stat = "identity", width = 0.7, fill = "#0554a4") +
   coord_flip() +
@@ -774,20 +815,26 @@ top5_Tiles <- ggplot(Tiles_data, aes(x = Brand, y = Total_rev)) +
 print(top5_Tiles)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+print(top5_Tiles)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
-```{r}
+```{r Top-Heating-Tiles-Graph,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "top_5_tiles_heating.pdf"), width = current_size[1], height = current_size[2])
 ggarrange(top5_Heating, top5_Tiles, nrow = 2)
 grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+ggarrange(top5_Heating, top5_Tiles, nrow = 2)
+grid::grid.raster(logo, x = 0.02, y = -0.03, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
 
 
-```{r}
+```{r Load-Armenia-Map,include=FALSE}
 armenia_shapefile <- st_read(paste0(PROJECT_PATH,"Armenia_Marzes/Armenia_Marzes.shp"))
 armenia_data <- final_sales_data %>%
   filter(Regions != "", Regions != "YEREVAN") %>%
@@ -797,7 +844,7 @@ armenia_map <- merge(armenia_shapefile, armenia_data, by.x = "Name_Eng", by.y = 
 ```
 
 
-```{r}
+```{r Armenia-Map-Graph,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_map_armenia.pdf"), width = current_size[1], height = current_size[2])
 plot_armenia <- ggplot(data = armenia_map) +
@@ -811,13 +858,16 @@ plot_armenia <- ggplot(data = armenia_map) +
 print(plot_armenia)
 grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+print(plot_armenia)
+grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 ```
 
 
 
 
 
-```{r}
+```{r Load-Yerevan-Map, include=FALSE}
 yerevan_shapefile <- st_read(paste0(PROJECT_PATH,"Yerevan-Districts/Yerevan-Districts.shp"))
 yerevan_data <- final_sales_data %>%
             filter(Districts != "Other Regions") %>%
@@ -828,7 +878,7 @@ yerevan_map <- merge(yerevan_shapefile, yerevan_data, by.x = "Name_en", by.y = "
 ```
 
 
-```{r}
+```{r Yerevan-Map-Graph,echo = FALSE, message=FALSE}
 current_size <- get_device_size()
 pdf(paste0(FIGURES_PATH, "sales_by_map_yerevan.pdf"), width = current_size[1], height = current_size[2])
 # Plotting the map for Yerevan districts
@@ -841,9 +891,206 @@ plot_yerevan <- ggplot(data = yerevan_map) +
 print(plot_yerevan)
 grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
 dev.off()
+
+print(plot_yerevan)
+grid::grid.raster(logo, x = 0.75, y = 0.005, just = c('left', 'bottom'), width = unit(1, 'inches'))
+```
+
+# PREDICTIONS
+
+```{r Load-Prediction-Data, include=FALSE}
+# Load One Layer LSTM predictions Data
+LSTM_ONE <- read.csv(paste0(DATA_PATH, "results/Predictions/LSTM_one_predictions.csv"))
+
+# Load Two Layer LSTM predictions Data
+LSTM_TWO <- read.csv(paste0(DATA_PATH, "results/Predictions/LSTM_multi_predictions.csv"))
+
+# Load Zero-Shot Lag-Llama predictions Data
+ZER_SHOT_LLAMA <- read.csv(paste0(DATA_PATH, "results/Predictions/lag_llama_zero_shot.csv"))
+
+# Load Fine-Tuned Lag-Llama predictions Data
+FINE_TUNED_LLAMA <- read.csv(paste0(DATA_PATH, "results/Predictions/lag_llama_fine_tune.csv"))
+
+# Load Random Forest Regressor Data
+#Train
+RFR_train <- read.csv(paste0(DATA_PATH, "results/Predictions/RFR_train_predictions.csv"))
+
+#Validation
+RFR_val <- read.csv(paste0(DATA_PATH, "results/Predictions/RFR_val_predictions.csv"))
+
+#Test
+RFR_test <- read.csv(paste0(DATA_PATH, "results/Predictions/RFR_test_predictions.csv"))
 ```
 
 
-# PREDICTIONS
+```{r Transform-Date-Col, include=FALSE}
+# One Layer LSTM predictions Data
+LSTM_ONE$X <- as.POSIXct(LSTM_ONE$X, format = "%Y-%m-%d")
+
+# Two Layer LSTM predictions Data
+LSTM_TWO$X <- as.POSIXct(LSTM_TWO$X, format = "%Y-%m-%d")
+
+#  Zero-Shot Lag-Llama predictions Data
+ZER_SHOT_LLAMA$date <- as.POSIXct(ZER_SHOT_LLAMA$date, format = "%Y-%m-%d")
+
+#  Fine-Tuned Lag-Llama predictions Data
+FINE_TUNED_LLAMA$date <-as.POSIXct(FINE_TUNED_LLAMA$date, format = "%Y-%m-%d")
+
+#  Random Forest Regressor Data
+#Train
+RFR_train$Date <- as.POSIXct(RFR_train$Date, format = "%Y-%m-%d")
+RFR_val$Date <- as.POSIXct(RFR_val$Date, format = "%Y-%m-%d")
+RFR_test$Date <- as.POSIXct(RFR_test$Date, format = "%Y-%m-%d")
+```
+
+```{r LSTM-One-Forecast, echo=FALSE, out.height='80%', message=FALSE}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "one_layer_lstm_prediction.pdf"), width = current_size[1], height = current_size[2])
+
+lstm_one_forecast<- ggplot() +
+  
+  geom_line(data = slice(aggregated_revnue_dataframe,811: 1051), aes(x = sale_date, y = Revenue), color = start_color, size = 1) +
+  
+  geom_line(data = tail(LSTM_ONE, 240), aes(x = X, y = Prediction), color = end_color, size = 1, alpha = 1) +
+  scale_x_datetime(date_labels = '%b', breaks = scales::date_breaks("1 month")) +
+  scale_y_continuous(labels = label_millions) +
+  labs(x = "", y = "Revenue", title = "One Layer LSTM Forecast") +
+  theme_minimal() +
+  theme(text = element_text(size = 15),  # Update font size
+        axis.text.x = element_text(hjust = 1))  # Rotate x axis labels
+print(lstm_one_forecast)
+dev.off()
+print(lstm_one_forecast)
+```
+
+
+```{r LSTM-Two-Forecast, echo=FALSE, out.height='80%', message=FALSE}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "two_layer_lstm_prediction.pdf"), width = current_size[1], height = current_size[2])
+
+
+two_layer_lstm_prediction<-ggplot() +
+  
+  geom_line(data = slice(aggregated_revnue_dataframe,811: 1051), aes(x = sale_date, y = Revenue), color = start_color, size = 1) +
+  
+  geom_line(data = tail(LSTM_TWO, 240), aes(x = X, y = Prediction), color = end_color, size = 1, alpha = 1) +
+  scale_x_datetime(date_labels = '%b', breaks = scales::date_breaks("1 month")) +
+  scale_y_continuous(labels = label_millions) +
+  labs(x = "", y = "Revenue", title = "Two Layer LSTM Forecast") +
+  theme_minimal() +
+  theme(text = element_text(size = 15),  # Update font size
+        axis.text.x = element_text(hjust = 1))  # Rotate x axis labels
+print(two_layer_lstm_prediction)
+dev.off()
+
+print(two_layer_lstm_prediction)
+```
+```{r LSTM-Predictions, echo=FALSE, message=FALSE}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "lstm_predictions.pdf"), width = current_size[1], height = current_size[2])
+ggarrange(lstm_one_forecast, two_layer_lstm_prediction, nrow = 2)
+dev.off()
+```
+
+```{r Zero-Shot-Forecast, echo=FALSE, out.height='80%', message=FALSE}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "zero_shot_lag_llam_prediction.pdf"), width = current_size[1], height = current_size[2])
+
+
+zero_shot_lag_llam_prediction<-ggplot() +
+  # Plot the target data (assuming the target data is structured similarly to 'all_preds')
+  geom_line(data = tail(aggregated_revnue_dataframe, 240), aes(x = sale_date, y = Revenue), color = start_color, size = 1) +
+  # Plot the median forecast
+  geom_line(data = ZER_SHOT_LLAMA, aes(x = date, y = pred), color = end_color, size = 1, alpha = 1, label = "Forecast") +
+  # Plot prediction intervals
+  geom_ribbon(data = ZER_SHOT_LLAMA, aes(x = date, ymin = p10, ymax = p90), fill = end_color, alpha = 0.2, inherit.aes = FALSE) +
+  scale_x_datetime(date_labels = '%b', breaks = scales::date_breaks("1 month")) +
+  scale_y_continuous(labels = label_millions) +
+  labs(x = "", y = "Revenue", title = "Zero-Shot, Lag-Llama Forecast") +
+  theme_minimal() +
+  theme(text = element_text(size = 15),  # Update font size
+        axis.text.x = element_text(hjust = 1))  # Rotate x axis labels
+
+print(zero_shot_lag_llam_prediction)
+dev.off()
+
+print(zero_shot_lag_llam_prediction)
+```
+
+
+```{r Fine-Tune-Forecast, echo=FALSE, out.height='80%', message=FALSE}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "fine_tune_lag_llam_prediction.pdf"), width = current_size[1], height = current_size[2])
+
+
+fine_tune_lag_llam_prediction<-ggplot() +
+  # Plot the target data (assuming the target data is structured similarly to 'all_preds')
+  geom_line(data = tail(aggregated_revnue_dataframe, 240), aes(x = sale_date, y = Revenue), color = start_color, size = 1) +
+  # Plot the median forecast
+  geom_line(data = FINE_TUNED_LLAMA, aes(x = date, y = pred), color = end_color, size = 1, alpha = 1, label = "Forecast") +
+  # Plot prediction intervals
+  geom_ribbon(data = FINE_TUNED_LLAMA, aes(x = date, ymin = p10, ymax = p90), fill = end_color, alpha = 0.2, inherit.aes = FALSE) +
+  scale_x_datetime(date_labels = '%b', breaks = scales::date_breaks("1 month")) +
+  scale_y_continuous(labels = label_millions) +
+  labs(x = "", y = "Revenue", title = "Fine-Tuned, Lag-Llama Forecast") +
+  theme_minimal() +
+  theme(text = element_text(size = 15),  # Update font size
+        axis.text.x = element_text(hjust = 1))  # Rotate x axis labels
+
+print(fine_tune_lag_llam_prediction)
+dev.off()
+
+print(fine_tune_lag_llam_prediction)
+```
+```{r Lag-Lama-Prediction, echo=FALSE, message=FALSE}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "lag_llam_prediction.pdf"), width = current_size[1], height = current_size[2])
+ggarrange(zero_shot_lag_llam_prediction, fine_tune_lag_llam_prediction, nrow = 2)
+dev.off()
+```
+
+
+```{r ML-Forecast-Graphing-Function, include=FALSE}
+
+
+plot_sales_data <- function(stores, data, label) {
+
+
+  # Aggregate sales and predictions by date
+  Aggregate_data <- data %>%
+    filter(Branch == stores) %>%
+    group_by(Date) %>%
+    summarise(Revenue_VAT = sum(True_value), Pred = sum(Pred), .groups = "drop")
+
+
+  # Plotting setup
+  p <- ggplot(data = Aggregate_data) +
+    geom_line(aes(x = Date, y = Revenue_VAT), color = start_color) +
+    geom_line(aes(x = Date, y = Pred), color = end_color) +
+    scale_x_datetime(date_labels = '%b', breaks = scales::date_breaks("1 month")) +
+  scale_y_continuous(labels = label_millions) +
+    theme_minimal() +
+    labs(title = label,subtitle = stores, x = "", y = "Revenue") 
+
+  # Print the plot
+  print(p)
+}
+
+```
+
+```{r ML-Forecast-Davit-Anhaght, echo=FALSE, out.height='80%', message=FALSE}
+current_size <- get_device_size()
+pdf(paste0(FIGURES_PATH, "ML_davit_anhaght_prediction.pdf"), width = current_size[1], height = current_size[2])
+
+ML_davit_anhaght_prediction<-plot_sales_data('Davit Anhaght S.',RFR_val, "Random Forest Regressor Forecast")
+dev.off()
+
+print(ML_davit_anhaght_prediction)
+```
+
+
+
+
+
 
 

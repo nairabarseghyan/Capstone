@@ -73,3 +73,19 @@ add_sales_proxies <- function(data) {
   return(data_copy)
 }
 
+
+general_revenue_dataframe <- function(data) {
+  # Ensure the 'Date' column is in Date format
+  data$sale_date <- as.Date(data$sale_date)
+  
+  # Aggregate revenue data by date
+  daily_revenue_df <- data %>%
+    select(sale_date, Revenue_VAT) %>%
+    group_by(sale_date) %>%
+    summarise(Revenue = sum(Revenue_VAT, na.rm = TRUE)) %>%
+    ungroup()
+  daily_revenue_df$sale_date<- as.POSIXct(daily_revenue_df$sale_date, format = "%Y-%m-%d")
+  # Return the aggregated daily revenue dataframe
+  return(daily_revenue_df)
+}
+
